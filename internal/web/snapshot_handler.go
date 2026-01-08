@@ -34,7 +34,15 @@ func (e *TownStateEngine) Refresh() error {
 		polecats = nil
 	}
 
-	state := TownStateFromConvoyData(convoys, polecats)
+    // --- CHANGE STARTS HERE ---
+    // Wrap the separate slices into the ConvoyData struct expected by the new function signature
+	data := ConvoyData{
+		Convoys:  convoys,
+		Polecats: polecats,
+	}
+
+	state := TownStateFromConvoyData(data)
+    // --- CHANGE ENDS HERE ---
 
 	e.stateMu.Lock()
 	e.state = state
