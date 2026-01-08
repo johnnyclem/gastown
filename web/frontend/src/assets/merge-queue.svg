@@ -1,0 +1,6 @@
+<svg width="96" height="96" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Merge Queue">
+  <polygon points="48,8 88,32 48,56 8,32" fill="#fee2e2" stroke="#dc2626" stroke-width="2" />
+  <polygon points="48,56 88,32 88,68 48,90" fill="#fecaca" stroke="#dc2626" stroke-width="2" />
+  <polygon points="48,56 8,32 8,68 48,90" fill="#fca5a5" stroke="#dc2626" stroke-width="2" />
+  <rect x="30" y="52" width="36" height="16" fill="#fff" stroke="#dc2626" stroke-width="2" />
+</svg>

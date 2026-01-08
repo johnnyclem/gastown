@@ -1,0 +1,6 @@
+<svg width="96" height="96" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="House">
+  <polygon points="48,10 86,32 48,54 10,32" fill="#d4f3ff" stroke="#3b82f6" stroke-width="2" />
+  <polygon points="48,54 86,32 86,66 48,88" fill="#60a5fa" stroke="#3b82f6" stroke-width="2" />
+  <polygon points="48,54 10,32 10,66 48,88" fill="#93c5fd" stroke="#3b82f6" stroke-width="2" />
+  <rect x="42" y="54" width="12" height="16" fill="#fef3c7" stroke="#3b82f6" stroke-width="2" />
+</svg>

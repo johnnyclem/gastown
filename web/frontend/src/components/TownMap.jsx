@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import layoutData from "../config/town_layout.json";
+import Character from "./Character.jsx";
+import Zone from "./Zone.jsx";
+import mayorsOfficeSprite from "../assets/mayors-office.svg";
+import houseSprite from "../assets/house.svg";
+import reviewStationSprite from "../assets/review-station.svg";
+import mergeQueueSprite from "../assets/merge-queue.svg";
 
-const TILE_SIZE = 32;
+const TILE_WIDTH = 64;
+const TILE_HEIGHT = 32;
 
 const statusToZone = {
   IDLE: "residential_district",
@@ -10,18 +17,36 @@ const statusToZone = {
   WORKING: "commercial_district"
 };
 
-const zoneColors = {
-  city_hall: "#ffcc66",
-  approval_office: "#99ccff",
-  merge_depot: "#ff9966",
-  residential_district: "#99dd99",
-  commercial_district: "#c9a0ff"
+const zoneSprites = {
+  city_hall: {
+    sprite: mayorsOfficeSprite,
+    emoji: "🏛️"
+  },
+  approval_office: {
+    sprite: reviewStationSprite,
+    emoji: "📋"
+  },
+  merge_depot: {
+    sprite: mergeQueueSprite,
+    emoji: "🚌"
+  },
+  residential_district: {
+    sprite: houseSprite,
+    emoji: "🏡"
+  },
+  commercial_district: {
+    sprite: null,
+    emoji: "🏢"
+  }
 };
 
-function gridToScreen(x, y) {
+function toIso(gridX, gridY, origin) {
+  const screenX = ((gridX - gridY) * TILE_WIDTH) / 2;
+  const screenY = ((gridX + gridY) * TILE_HEIGHT) / 2;
+
   return {
-    left: `${x * TILE_SIZE}px`,
-    top: `${y * TILE_SIZE}px`
+    left: `${screenX + origin.x}px`,
+    top: `${screenY + origin.y}px`
   };
 }
 
@@ -98,28 +123,45 @@ export default function TownMap() {
     return entries;
   }, [layout]);
 
+  const origin = useMemo(
+    () => ({
+      x: (layout.grid_size * TILE_WIDTH) / 2,
+      y: TILE_HEIGHT * 2
+    }),
+    [layout.grid_size]
+  );
+
   const gridStyle = {
-    width: `${layout.grid_size * TILE_SIZE}px`,
-    height: `${layout.grid_size * TILE_SIZE}px`
+    width: `${layout.grid_size * TILE_WIDTH}px`,
+    height: `${layout.grid_size * TILE_HEIGHT}px`
   };
 
   const residential = layout.zones.residential_district ?? [];
+  const mergeQueue = snapshot.agents.filter(
+    (agent) => agent.status === "MERGING"
+  );
+  const mergeQueueIndices = new Map(
+    mergeQueue.map((agent, index) => [agent.name, index])
+  );
 
   return (
     <div className="town-map">
       <div className="grid" style={gridStyle}>
-        {zones.map((zone) => (
-          <div
-            key={zone.id}
-            className="zone"
-            style={{
-              ...gridToScreen(zone.x, zone.y),
-              backgroundColor: zoneColors[zone.key] ?? "#dddddd"
-            }}
-          >
-            <span>{zone.label}</span>
-          </div>
-        ))}
+        {zones.map((zone) => {
+          const asset = zoneSprites[zone.key] ?? {};
+          const position = toIso(zone.x, zone.y, origin);
+          const zIndex = zone.x + zone.y;
+          return (
+            <Zone
+              key={zone.id}
+              label={zone.label}
+              position={position}
+              zIndex={zIndex}
+              sprite={asset.sprite}
+              fallbackEmoji={asset.emoji}
+            />
+          );
+        })}
         {snapshot.agents.map((agent) => {
           const zoneKey = statusToZone[agent.status] ?? "city_hall";
           const zone = layout.zones[zoneKey];
@@ -127,12 +169,25 @@ export default function TownMap() {
             ? pickResidentialSpot(agent.name, residential)
             : zone;
           const coords = position ?? { x: 0, y: 0 };
+          const mergeIndex = mergeQueueIndices.get(agent.name);
+          const queueOffset = mergeIndex ? mergeIndex : 0;
+          const adjustedCoords =
+            agent.status === "MERGING"
+              ? {
+                  x: coords.x + queueOffset,
+                  y: coords.y + queueOffset
+                }
+              : coords;
+          const isoPosition = toIso(adjustedCoords.x, adjustedCoords.y, origin);
+          const zIndex = adjustedCoords.x + adjustedCoords.y + 1;
+
           return (
-            <div
+            <Character
               key={agent.name}
-              className="agent"
+              name={agent.name}
               title={`${agent.name} (${agent.status})`}
-              style={gridToScreen(coords.x, coords.y)}
+              position={isoPosition}
+              zIndex={zIndex}
             />
           );
         })}
