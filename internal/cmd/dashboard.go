@@ -53,12 +53,25 @@ func runDashboard(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("creating convoy fetcher: %w", err)
 	}
+	threadSafeFetcher := web.NewThreadSafeConvoyFetcher(fetcher)
 
 	// Create the handler
-	handler, err := web.NewConvoyHandler(fetcher)
+	handler, err := web.NewConvoyHandler(threadSafeFetcher)
 	if err != nil {
 		return fmt.Errorf("creating convoy handler: %w", err)
 	}
+
+	snapshotHandler := web.NewTownSnapshotHandler(threadSafeFetcher)
+	frontendHandler, err := web.NewTownFrontendHandler()
+	if err != nil {
+		return fmt.Errorf("creating town frontend handler: %w", err)
+	}
+
+	mux := http.NewServeMux()
+	mux.Handle("/", handler)
+	mux.Handle("/api/town/snapshot", snapshotHandler)
+	mux.Handle("/town", http.RedirectHandler("/town/", http.StatusMovedPermanently))
+	mux.Handle("/town/", http.StripPrefix("/town/", frontendHandler))
 
 	// Build the URL
 	url := fmt.Sprintf("http://localhost:%d", dashboardPort)
@@ -74,7 +87,7 @@ func runDashboard(cmd *cobra.Command, args []string) error {
 
 	server := &http.Server{
 		Addr:              fmt.Sprintf(":%d", dashboardPort),
-		Handler:           handler,
+		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      60 * time.Second,

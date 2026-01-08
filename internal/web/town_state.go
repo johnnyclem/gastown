@@ -93,3 +93,66 @@ func AnimationStateForJobStatus(status JobStatus) AnimationState {
 		return AnimationIdle
 	}
 }
+
+// TownStateFromConvoyData converts convoy dashboard data into TownState for the frontend.
+func TownStateFromConvoyData(data ConvoyData) TownState {
+	jobs := make(map[string]JobState)
+	for _, convoy := range data.Convoys {
+		for _, issue := range convoy.TrackedIssues {
+			if _, exists := jobs[issue.ID]; exists {
+				continue
+			}
+			jobs[issue.ID] = JobState{
+				ID:     issue.ID,
+				Title:  issue.Title,
+				Status: JobStatusFromIssueStatus(issue.Status),
+			}
+		}
+		if len(convoy.TrackedIssues) == 0 {
+			if _, exists := jobs[convoy.ID]; !exists {
+				jobs[convoy.ID] = JobState{
+					ID:     convoy.ID,
+					Title:  convoy.Title,
+					Status: JobStatusFromIssueStatus(convoy.Status),
+				}
+			}
+		}
+	}
+
+	jobStates := make([]JobState, 0, len(jobs))
+	for _, job := range jobs {
+		jobStates = append(jobStates, job)
+	}
+
+	agents := make([]AgentState, 0, len(data.Polecats))
+	for _, polecat := range data.Polecats {
+		agents = append(agents, AgentState{
+			Name:   polecat.Name,
+			Role:   polecat.Rig,
+			Status: agentStatusFromHint(polecat.StatusHint),
+		})
+	}
+
+	return TownState{
+		Agents: agents,
+		Jobs:   jobStates,
+	}
+}
+
+func agentStatusFromHint(hint string) AgentStatus {
+	if hint == "" {
+		return AgentStatusIdle
+	}
+
+	lower := strings.ToLower(hint)
+	switch {
+	case strings.Contains(lower, "merge"):
+		return AgentStatusMerging
+	case strings.Contains(lower, "review"):
+		return AgentStatusReviewing
+	case strings.Contains(lower, "idle"):
+		return AgentStatusIdle
+	default:
+		return AgentStatusWorking
+	}
+}
