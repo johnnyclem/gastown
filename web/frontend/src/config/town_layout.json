@@ -1,0 +1,16 @@
+{
+  "layout": {
+    "grid_size": 20,
+    "zones": {
+      "city_hall": { "x": 10, "y": 10, "label": "Mayor's Office" },
+      "approval_office": { "x": 14, "y": 8, "label": "Review Station" },
+      "merge_depot": { "x": 18, "y": 18, "label": "Merge Queue" },
+      "residential_district": [
+        { "id": "house_1", "x": 4, "y": 4 },
+        { "id": "house_2", "x": 4, "y": 6 },
+        { "id": "house_3", "x": 6, "y": 4 }
+      ],
+      "commercial_district": { "x": 12, "y": 4, "label": "Swarm Offices" }
+    }
+  }
+}
