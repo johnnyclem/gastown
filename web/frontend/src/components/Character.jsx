@@ -8,10 +8,11 @@ export default function Character({ name, role, status, sprite, title, position,
       style={{ ...position, zIndex }}
       title={title}
     >
-      <div className="character-sprite">
-        {sprite ? (
-          <img src={sprite} alt={role} />
-        ) : (
+      <div 
+        className="character-sprite"
+        style={sprite ? { backgroundImage: `url(${sprite})` } : {}}
+      >
+        {!sprite && (
           <div className="character-avatar">{name?.charAt(0) ?? "?"}</div>
         )}
       </div>

@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import layoutData from "../config/town_layout.json";
 import Character from "./Character.jsx";
 import Zone from "./Zone.jsx";
+import Minimap from "./Minimap.jsx";
 
 // Building Assets
 import cityHallImg from "../assets/building_city_hall.png";
@@ -60,7 +61,9 @@ function toIso(gridX, gridY, origin) {
 
   return {
     left: `${screenX + origin.x}px`,
-    top: `${screenY + origin.y}px`
+    top: `${screenY + origin.y}px`,
+    x: screenX + origin.x,
+    y: screenY + origin.y
   };
 }
 
@@ -85,6 +88,13 @@ export default function TownMap() {
   const [snapshot, setSnapshot] = useState({ agents: [] });
   const [isDemoMode, setIsDemoMode] = useState(true);
   const layout = layoutData.layout;
+  
+  // Viewport State
+  const [scale, setScale] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const lastMousePos = useRef({ x: 0, y: 0 });
+  const viewportRef = useRef(null);
 
   useEffect(() => {
     console.log("Assets Loaded:", { cityHallImg, houseImg });
@@ -183,6 +193,65 @@ export default function TownMap() {
     mergeQueue.map((agent, index) => [agent.name, index])
   );
 
+  // Compute agent positions once for both Map and Minimap
+  const agentPositions = useMemo(() => {
+    return snapshot.agents.map((agent) => {
+      const zoneKey = statusToZone[agent.status] ?? "city_hall";
+      const zone = layout.zones[zoneKey];
+      const position = Array.isArray(zone)
+        ? pickResidentialSpot(agent.name, residential)
+        : zone;
+      const coords = position ?? { x: 0, y: 0 };
+      const mergeIndex = mergeQueueIndices.get(agent.name);
+      const queueOffset = mergeIndex ? mergeIndex : 0;
+      const adjustedCoords =
+        agent.status === "MERGING"
+          ? {
+              x: coords.x + queueOffset,
+              y: coords.y + queueOffset
+            }
+          : coords;
+      
+      const isoPosition = toIso(adjustedCoords.x, adjustedCoords.y, origin);
+      const zIndex = (adjustedCoords.x + adjustedCoords.y) * 10 + 1;
+      const sprite = roleSprites[agent.role] ?? roleSprites["engineer"];
+
+      return {
+        ...agent,
+        gridX: adjustedCoords.x,
+        gridY: adjustedCoords.y,
+        isoPosition,
+        zIndex,
+        sprite
+      };
+    });
+  }, [snapshot.agents, layout, residential, mergeQueueIndices, origin]);
+
+
+  // Viewport Handlers
+  const handleWheel = (e) => {
+    e.preventDefault();
+    const newScale = Math.min(Math.max(scale - e.deltaY * 0.001, 0.2), 3);
+    setScale(newScale);
+  };
+
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    lastMousePos.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    const dx = e.clientX - lastMousePos.current.x;
+    const dy = e.clientY - lastMousePos.current.y;
+    setOffset((prev) => ({ x: prev.x + dx, y: prev.y + dy }));
+    lastMousePos.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
   return (
     <div className="town-map">
       <button
@@ -191,7 +260,7 @@ export default function TownMap() {
           position: "absolute",
           top: "10px",
           right: "10px",
-          zIndex: 1000,
+          zIndex: 3000,
           padding: "8px 16px",
           background: isDemoMode ? "#2563eb" : "#e5e7eb",
           color: isDemoMode ? "white" : "black",
@@ -204,55 +273,60 @@ export default function TownMap() {
       >
         {isDemoMode ? "Disable Demo" : "Enable Demo"}
       </button>
-      <div className="grid" style={gridStyle}>
-        {zones.map((zone) => {
-          const asset = zoneSprites[zone.key] ?? {};
-          const position = toIso(zone.x, zone.y, origin);
-          const zIndex = (zone.x + zone.y) * 10;
-          return (
-            <Zone
-              key={zone.id}
-              label={zone.label}
-              position={position}
-              zIndex={zIndex}
-              sprite={asset.sprite}
-              fallbackEmoji={asset.emoji}
-            />
-          );
-        })}
-        {snapshot.agents.map((agent) => {
-          const zoneKey = statusToZone[agent.status] ?? "city_hall";
-          const zone = layout.zones[zoneKey];
-          const position = Array.isArray(zone)
-            ? pickResidentialSpot(agent.name, residential)
-            : zone;
-          const coords = position ?? { x: 0, y: 0 };
-          const mergeIndex = mergeQueueIndices.get(agent.name);
-          const queueOffset = mergeIndex ? mergeIndex : 0;
-          const adjustedCoords =
-            agent.status === "MERGING"
-              ? {
-                  x: coords.x + queueOffset,
-                  y: coords.y + queueOffset
-                }
-              : coords;
-          const isoPosition = toIso(adjustedCoords.x, adjustedCoords.y, origin);
-          const zIndex = (adjustedCoords.x + adjustedCoords.y) * 10 + 1;
-          const sprite = roleSprites[agent.role] ?? roleSprites["engineer"];
 
-          return (
-            <Character
-              key={agent.name}
-              name={agent.name}
-              role={agent.role}
-              status={agent.status}
-              sprite={sprite}
-              title={`${agent.name} (${agent.role})`}
-              position={isoPosition}
-              zIndex={zIndex}
-            />
-          );
-        })}
+      <div className="map-controls">
+         <button className="control-btn" onClick={() => setScale(s => Math.min(s + 0.2, 3))}>+</button>
+         <button className="control-btn" onClick={() => setScale(s => Math.max(s - 0.2, 0.2))}>-</button>
+         <button className="control-btn" onClick={() => { setScale(1); setOffset({x:0,y:0}); }}>⟲</button>
+      </div>
+
+      <Minimap zones={zones} agents={agentPositions} layout={layout} />
+
+      <div 
+        className="viewport" 
+        ref={viewportRef}
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
+        <div 
+          className="world"
+          style={{
+            transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`
+          }}
+        >
+          <div className="grid" style={gridStyle}>
+            {zones.map((zone) => {
+              const asset = zoneSprites[zone.key] ?? {};
+              const position = toIso(zone.x, zone.y, origin);
+              const zIndex = (zone.x + zone.y) * 10;
+              return (
+                <Zone
+                  key={zone.id}
+                  label={zone.label}
+                  position={position}
+                  zIndex={zIndex}
+                  sprite={asset.sprite}
+                  fallbackEmoji={asset.emoji}
+                />
+              );
+            })}
+            {agentPositions.map((agent) => (
+              <Character
+                key={agent.name}
+                name={agent.name}
+                role={agent.role}
+                status={agent.status}
+                sprite={agent.sprite}
+                title={`${agent.name} (${agent.role})`}
+                position={agent.isoPosition}
+                zIndex={agent.zIndex}
+              />
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
