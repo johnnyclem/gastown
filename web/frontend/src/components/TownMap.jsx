@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import layoutData from "../config/town_layout.json";
 import Character from "./Character.jsx";
 import Zone from "./Zone.jsx";
-import mayorsOfficeSprite from "../assets/mayors-office.svg";
-import houseSprite from "../assets/house.svg";
-import reviewStationSprite from "../assets/review-station.svg";
-import mergeQueueSprite from "../assets/merge-queue.svg";
+import cityHallSprite from "../assets/building_city_hall.png";
+import houseSprite from "../assets/building_house_small.png";
+import officeSprite from "../assets/building_office_large.png";
+import reviewStationSprite from "../assets/building_review_station.png";
+import mergeDepotSprite from "../assets/building_depot.png";
 
 const TILE_WIDTH = 64;
 const TILE_HEIGHT = 32;
@@ -19,7 +20,7 @@ const statusToZone = {
 
 const zoneSprites = {
   city_hall: {
-    sprite: mayorsOfficeSprite,
+    sprite: cityHallSprite,
     emoji: "🏛️"
   },
   approval_office: {
@@ -27,7 +28,7 @@ const zoneSprites = {
     emoji: "📋"
   },
   merge_depot: {
-    sprite: mergeQueueSprite,
+    sprite: mergeDepotSprite,
     emoji: "🚌"
   },
   residential_district: {
@@ -35,7 +36,7 @@ const zoneSprites = {
     emoji: "🏡"
   },
   commercial_district: {
-    sprite: null,
+    sprite: officeSprite,
     emoji: "🏢"
   }
 };
@@ -150,14 +151,14 @@ export default function TownMap() {
         {zones.map((zone) => {
           const asset = zoneSprites[zone.key] ?? {};
           const position = toIso(zone.x, zone.y, origin);
-          const zIndex = zone.x + zone.y;
+          const zIndex = (zone.x + zone.y) * 10;
           return (
             <Zone
               key={zone.id}
               label={zone.label}
               position={position}
               zIndex={zIndex}
-              sprite={asset.sprite}
+              imageSrc={asset.sprite}
               fallbackEmoji={asset.emoji}
             />
           );
@@ -179,12 +180,14 @@ export default function TownMap() {
                 }
               : coords;
           const isoPosition = toIso(adjustedCoords.x, adjustedCoords.y, origin);
-          const zIndex = adjustedCoords.x + adjustedCoords.y + 1;
+          const zIndex = (adjustedCoords.x + adjustedCoords.y) * 10;
 
           return (
             <Character
               key={agent.name}
               name={agent.name}
+              role={agent.role}
+              status={agent.status}
               title={`${agent.name} (${agent.status})`}
               position={isoPosition}
               zIndex={zIndex}
