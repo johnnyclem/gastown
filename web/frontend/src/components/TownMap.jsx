@@ -2,6 +2,11 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import layoutData from "../config/town_layout.json";
 import Character from "./Character.jsx";
 import Zone from "./Zone.jsx";
+import cityHallSprite from "../assets/building_city_hall.png";
+import houseSprite from "../assets/building_house_small.png";
+import officeSprite from "../assets/building_office_large.png";
+import reviewStationSprite from "../assets/building_review_station.png";
+import mergeDepotSprite from "../assets/building_depot.png";
 import Minimap from "./Minimap.jsx";
 
 // Building Assets
@@ -28,7 +33,7 @@ const statusToZone = {
 
 const zoneSprites = {
   city_hall: {
-    sprite: cityHallImg,
+    sprite: cityHallSprite,
     emoji: "🏛️"
   },
   approval_office: {
@@ -36,7 +41,7 @@ const zoneSprites = {
     emoji: "📋"
   },
   merge_depot: {
-    sprite: depotImg,
+    sprite: mergeDepotSprite,
     emoji: "🚌"
   },
   residential_district: {
@@ -44,7 +49,7 @@ const zoneSprites = {
     emoji: "🏡"
   },
   commercial_district: {
-    sprite: officeImg,
+    sprite: officeSprite,
     emoji: "🏢"
   }
 };
@@ -260,6 +265,53 @@ export default function TownMap() {
 
   return (
     <div className="town-map">
+      <div className="grid" style={gridStyle}>
+        {zones.map((zone) => {
+          const asset = zoneSprites[zone.key] ?? {};
+          const position = toIso(zone.x, zone.y, origin);
+          const zIndex = (zone.x + zone.y) * 10;
+          return (
+            <Zone
+              key={zone.id}
+              label={zone.label}
+              position={position}
+              zIndex={zIndex}
+              imageSrc={asset.sprite}
+              fallbackEmoji={asset.emoji}
+            />
+          );
+        })}
+        {snapshot.agents.map((agent) => {
+          const zoneKey = statusToZone[agent.status] ?? "city_hall";
+          const zone = layout.zones[zoneKey];
+          const position = Array.isArray(zone)
+            ? pickResidentialSpot(agent.name, residential)
+            : zone;
+          const coords = position ?? { x: 0, y: 0 };
+          const mergeIndex = mergeQueueIndices.get(agent.name);
+          const queueOffset = mergeIndex ? mergeIndex : 0;
+          const adjustedCoords =
+            agent.status === "MERGING"
+              ? {
+                  x: coords.x + queueOffset,
+                  y: coords.y + queueOffset
+                }
+              : coords;
+          const isoPosition = toIso(adjustedCoords.x, adjustedCoords.y, origin);
+          const zIndex = (adjustedCoords.x + adjustedCoords.y) * 10;
+
+          return (
+            <Character
+              key={agent.name}
+              name={agent.name}
+              role={agent.role}
+              status={agent.status}
+              title={`${agent.name} (${agent.status})`}
+              position={isoPosition}
+              zIndex={zIndex}
+            />
+          );
+        })}
       <button
         onClick={() => setIsDemoMode(!isDemoMode)}
         style={{

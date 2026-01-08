@@ -387,19 +387,11 @@ body {
 
 
 .character-avatar {
-
-  /* Legacy fallback style */
-
-  width: 28px;
-
-  height: 28px;
-
-  border-radius: 999px;
-
-  background: #1d4ed8;
-
-  color: #fff;
-
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1f2937;
   display: grid;
 
   place-items: center;
