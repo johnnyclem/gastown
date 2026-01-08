@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/steveyegge/gastown/internal/agent"
 	"github.com/steveyegge/gastown/internal/config"
 	"github.com/steveyegge/gastown/internal/constants"
 	"github.com/steveyegge/gastown/internal/session"
@@ -130,12 +131,15 @@ func startMayorSession(t *tmux.Tmux, sessionName string) error {
 	_ = t.SetEnvironment(sessionName, "GT_ROLE", "mayor")
 	_ = t.SetEnvironment(sessionName, "BD_ACTOR", "mayor")
 
+	resolvedAgent := config.ResolveAgent(townRoot, "")
+	startupAdapter := agent.AdapterFor(resolvedAgent)
+
 	// Apply Mayor theme (non-fatal: theming failure doesn't affect operation)
 	// Note: ConfigureGasTownSession includes cycle bindings
 	theme := tmux.MayorTheme()
 	_ = t.ConfigureGasTownSession(sessionName, theme, "", "Mayor", "coordinator")
 
-	// Launch Claude - the startup hook handles 'gt prime' automatically
+	// Launch the configured agent - the startup hook handles 'gt prime' automatically
 	// Use SendKeysDelayed to allow shell initialization after NewSession
 	// Export GT_ROLE and BD_ACTOR in the command since tmux SetEnvironment only affects new panes
 	// Mayor uses default runtime config (empty rigPath) since it's not rig-specific
@@ -144,10 +148,11 @@ func startMayorSession(t *tmux.Tmux, sessionName string) error {
 		return fmt.Errorf("sending command: %w", err)
 	}
 
-	// Wait for Claude to start (non-fatal)
-	if err := t.WaitForCommand(sessionName, constants.SupportedShells, constants.ClaudeStartTimeout); err != nil {
+	// Wait for the agent to start (non-fatal)
+	if err := t.WaitForCommand(sessionName, constants.SupportedShells, startupAdapter.StartTimeout()); err != nil {
 		// Non-fatal
 	}
+	_ = startupAdapter.AcceptStartupWarnings(t, sessionName)
 	time.Sleep(constants.ShutdownNotifyDelay)
 
 	// Inject startup nudge for predecessor discovery via /resume

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/steveyegge/gastown/internal/agent"
 	"github.com/steveyegge/gastown/internal/beads"
 	"github.com/steveyegge/gastown/internal/config"
 	"github.com/steveyegge/gastown/internal/constants"
@@ -211,8 +212,8 @@ func (d *Daemon) executeLifecycleAction(request *LifecycleRequest) error {
 // ParsedIdentity holds the components extracted from an agent identity string.
 // This is used to look up the appropriate role bead for lifecycle config.
 type ParsedIdentity struct {
-	RoleType string // mayor, deacon, witness, refinery, crew, polecat
-	RigName  string // Empty for town-level agents (mayor, deacon)
+	RoleType  string // mayor, deacon, witness, refinery, crew, polecat
+	RigName   string // Empty for town-level agents (mayor, deacon)
 	AgentName string // Empty for singletons (mayor, deacon, witness, refinery)
 }
 
@@ -320,19 +321,26 @@ func (d *Daemon) identityToSession(identity string) string {
 // Uses role bead config if available, falls back to hardcoded defaults.
 func (d *Daemon) restartSession(sessionName, identity string) error {
 	// Get role config for this identity
-	config, parsed, err := d.getRoleConfigForIdentity(identity)
+	roleConfig, parsed, err := d.getRoleConfigForIdentity(identity)
 	if err != nil {
 		return fmt.Errorf("parsing identity: %w", err)
 	}
 
+	rigPath := ""
+	if parsed.RigName != "" {
+		rigPath = filepath.Join(d.config.TownRoot, parsed.RigName)
+	}
+	resolvedAgent := config.ResolveAgent(d.config.TownRoot, rigPath)
+	startupAdapter := agent.AdapterFor(resolvedAgent)
+
 	// Determine working directory
-	workDir := d.getWorkDir(config, parsed)
+	workDir := d.getWorkDir(roleConfig, parsed)
 	if workDir == "" {
 		return fmt.Errorf("cannot determine working directory for %s", identity)
 	}
 
 	// Determine if pre-sync is needed
-	needsPreSync := d.getNeedsPreSync(config, parsed)
+	needsPreSync := d.getNeedsPreSync(roleConfig, parsed)
 
 	// Pre-sync workspace for agents with git worktrees
 	if needsPreSync {
@@ -341,29 +349,29 @@ func (d *Daemon) restartSession(sessionName, identity string) error {
 	}
 
 	// Create session
-	// Use EnsureSessionFresh to handle zombie sessions that exist but have dead Claude
+	// Use EnsureSessionFresh to handle zombie sessions that exist but have dead agents
 	if err := d.tmux.EnsureSessionFresh(sessionName, workDir); err != nil {
 		return fmt.Errorf("creating session: %w", err)
 	}
 
 	// Set environment variables
-	d.setSessionEnvironment(sessionName, identity, config, parsed)
+	d.setSessionEnvironment(sessionName, identity, roleConfig, parsed)
 
 	// Apply theme (non-fatal: theming failure doesn't affect operation)
 	d.applySessionTheme(sessionName, parsed)
 
 	// Get and send startup command
-	startCmd := d.getStartCommand(config, parsed)
+	startCmd := d.getStartCommand(roleConfig, parsed)
 	if err := d.tmux.SendKeys(sessionName, startCmd); err != nil {
 		return fmt.Errorf("sending startup command: %w", err)
 	}
 
-	// Wait for Claude to start, then accept bypass permissions warning if it appears.
+	// Wait for the agent to start, then accept any startup warnings if needed.
 	// This ensures automated role starts aren't blocked by the warning dialog.
-	if err := d.tmux.WaitForCommand(sessionName, constants.SupportedShells, constants.ClaudeStartTimeout); err != nil {
-		// Non-fatal - Claude might still start
+	if err := d.tmux.WaitForCommand(sessionName, constants.SupportedShells, startupAdapter.StartTimeout()); err != nil {
+		// Non-fatal - agent might still start
 	}
-	_ = d.tmux.AcceptBypassPermissionsWarning(sessionName)
+	_ = startupAdapter.AcceptStartupWarnings(d.tmux, sessionName)
 	time.Sleep(constants.ShutdownNotifyDelay)
 
 	// GUPP: Gas Town Universal Propulsion Principle
@@ -572,7 +580,7 @@ func (d *Daemon) getAgentBeadInfo(agentBeadID string) (*AgentBeadInfo, error) {
 		Type        string `json:"issue_type"`
 		Description string `json:"description"`
 		UpdatedAt   string `json:"updated_at"`
-		HookBead    string `json:"hook_bead"`    // Read from database column
+		HookBead    string `json:"hook_bead"`   // Read from database column
 		AgentState  string `json:"agent_state"` // Read from database column
 	}
 
@@ -913,7 +921,7 @@ func (d *Daemon) getDeadAgents() []deadAgentInfo {
 	var agents []struct {
 		ID         string `json:"id"`
 		Type       string `json:"issue_type"`
-		HookBead   string `json:"hook_bead"`    // Read from database column
+		HookBead   string `json:"hook_bead"`   // Read from database column
 		AgentState string `json:"agent_state"` // Read from database column
 	}
 
@@ -972,4 +980,3 @@ Action needed: Either restart the agent or reassign the work.`,
 		d.logger.Printf("Notified %s of orphaned work for %s", witnessAddr, agentID)
 	}
 }
-

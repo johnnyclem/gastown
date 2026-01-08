@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/steveyegge/gastown/internal/claude"
+	"github.com/steveyegge/gastown/internal/agent"
 	"github.com/steveyegge/gastown/internal/config"
 	"github.com/steveyegge/gastown/internal/constants"
 	"github.com/steveyegge/gastown/internal/crew"
@@ -263,15 +263,15 @@ func startConfiguredCrew(t *tmux.Tmux, townRoot string) {
 		for _, crewName := range crewToStart {
 			sessionID := crewSessionName(r.Name, crewName)
 			if running, _ := t.HasSession(sessionID); running {
-				// Session exists - check if Claude is still running
-				if !t.IsClaudeRunning(sessionID) {
-					// Claude has exited, restart it
-					fmt.Printf("  %s %s/%s session exists, restarting Claude...\n", style.Dim.Render("○"), r.Name, crewName)
+				// Session exists - check if the agent is still running
+				if !t.IsAgentRunning(sessionID) {
+					// Agent has exited, restart it
+					fmt.Printf("  %s %s/%s session exists, restarting agent...\n", style.Dim.Render("○"), r.Name, crewName)
 					claudeCmd := config.BuildCrewStartupCommand(r.Name, crewName, r.Path, "gt prime")
 					if err := t.SendKeys(sessionID, claudeCmd); err != nil {
 						fmt.Printf("  %s %s/%s restart failed: %v\n", style.Dim.Render("○"), r.Name, crewName, err)
 					} else {
-						fmt.Printf("  %s %s/%s Claude restarted\n", style.Bold.Render("✓"), r.Name, crewName)
+						fmt.Printf("  %s %s/%s agent restarted\n", style.Bold.Render("✓"), r.Name, crewName)
 						startedAny = true
 					}
 				} else {
@@ -312,6 +312,9 @@ func discoverAllRigs(townRoot string) ([]*rig.Rig, error) {
 func ensureRefinerySession(rigName string, r *rig.Rig) (bool, error) {
 	t := tmux.NewTmux()
 	sessionName := fmt.Sprintf("gt-%s-refinery", rigName)
+	townRoot := filepath.Dir(r.Path)
+	resolvedAgent := config.ResolveAgent(townRoot, r.Path)
+	startupAdapter := agent.AdapterFor(resolvedAgent)
 
 	// Check if session already exists
 	running, err := t.HasSession(sessionName)
@@ -330,9 +333,9 @@ func ensureRefinerySession(rigName string, r *rig.Rig) (bool, error) {
 		refineryRigDir = r.Path
 	}
 
-	// Ensure Claude settings exist (autonomous role needs mail in SessionStart)
-	if err := claude.EnsureSettingsForRole(refineryRigDir, "refinery"); err != nil {
-		return false, fmt.Errorf("ensuring Claude settings: %w", err)
+	// Ensure settings exist (autonomous role needs mail in SessionStart)
+	if err := startupAdapter.EnsureRoleSettings(refineryRigDir, "refinery"); err != nil {
+		return false, fmt.Errorf("ensuring settings: %w", err)
 	}
 
 	// Create new tmux session
@@ -356,16 +359,17 @@ func ensureRefinerySession(rigName string, r *rig.Rig) (bool, error) {
 	theme := tmux.AssignTheme(rigName)
 	_ = t.ConfigureGasTownSession(sessionName, theme, rigName, "refinery", "refinery")
 
-	// Launch Claude directly (no respawn loop - daemon handles restart)
+	// Launch the configured agent directly (no respawn loop - daemon handles restart)
 	// Export GT_ROLE and BD_ACTOR in the command since tmux SetEnvironment only affects new panes
 	if err := t.SendKeys(sessionName, config.BuildAgentStartupCommand("refinery", bdActor, "", "")); err != nil {
 		return false, fmt.Errorf("sending command: %w", err)
 	}
 
-	// Wait for Claude to start (non-fatal)
-	if err := t.WaitForCommand(sessionName, constants.SupportedShells, constants.ClaudeStartTimeout); err != nil {
+	// Wait for the agent to start (non-fatal)
+	if err := t.WaitForCommand(sessionName, constants.SupportedShells, startupAdapter.StartTimeout()); err != nil {
 		// Non-fatal
 	}
+	_ = startupAdapter.AcceptStartupWarnings(t, sessionName)
 	time.Sleep(constants.ShutdownNotifyDelay)
 
 	// Inject startup nudge for predecessor discovery via /resume
@@ -786,13 +790,13 @@ func runStartCrew(cmd *cobra.Command, args []string) error {
 	}
 
 	if hasSession {
-		// Session exists - check if Claude is still running
-		if !t.IsClaudeRunning(sessionID) {
-			// Claude has exited, restart it with "gt prime" as initial prompt
-			fmt.Printf("Session exists, restarting Claude...\n")
+		// Session exists - check if the agent is still running
+		if !t.IsAgentRunning(sessionID) {
+			// Agent has exited, restart it with "gt prime" as initial prompt
+			fmt.Printf("Session exists, restarting agent...\n")
 			claudeCmd := config.BuildCrewStartupCommand(rigName, name, r.Path, "gt prime")
 			if err := t.SendKeys(sessionID, claudeCmd); err != nil {
-				return fmt.Errorf("restarting claude: %w", err)
+				return fmt.Errorf("restarting agent: %w", err)
 			}
 		} else {
 			fmt.Printf("%s Session already running: %s\n", style.Dim.Render("○"), sessionID)
@@ -822,11 +826,11 @@ func runStartCrew(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("waiting for shell: %w", err)
 		}
 
-		// Start claude with skip permissions and proper env vars for seance
+		// Start the configured agent with skip permissions and proper env vars for seance
 		// Pass "gt prime" as initial prompt so context is loaded immediately
 		claudeCmd := config.BuildCrewStartupCommand(rigName, name, r.Path, "gt prime")
 		if err := t.SendKeys(sessionID, claudeCmd); err != nil {
-			return fmt.Errorf("starting claude: %w", err)
+			return fmt.Errorf("starting agent: %w", err)
 		}
 
 		fmt.Printf("%s Started crew workspace: %s/%s\n",
@@ -944,12 +948,12 @@ func startCrewMember(rigName, crewName, townRoot string) error {
 		return fmt.Errorf("waiting for shell: %w", err)
 	}
 
-	// Start claude with proper env vars for seance
+	// Start the configured agent with proper env vars for seance
 	// Pass "gt prime" as initial prompt so context is loaded immediately
 	// (SessionStart hook fires, then Claude processes "gt prime" as first user message)
 	claudeCmd := config.BuildCrewStartupCommand(rigName, crewName, r.Path, "gt prime")
 	if err := t.SendKeys(sessionID, claudeCmd); err != nil {
-		return fmt.Errorf("starting claude: %w", err)
+		return fmt.Errorf("starting agent: %w", err)
 	}
 
 	return nil

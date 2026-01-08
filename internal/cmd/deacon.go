@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/steveyegge/gastown/internal/agent"
 	"github.com/steveyegge/gastown/internal/beads"
 	"github.com/steveyegge/gastown/internal/config"
 	"github.com/steveyegge/gastown/internal/constants"
@@ -186,7 +187,6 @@ This helps the Deacon understand which agents may need attention.`,
 	RunE: runDeaconHealthState,
 }
 
-
 var (
 	triggerTimeout time.Duration
 
@@ -289,6 +289,9 @@ func startDeaconSession(t *tmux.Tmux, sessionName string) error {
 	_ = t.SetEnvironment(sessionName, "GT_ROLE", "deacon")
 	_ = t.SetEnvironment(sessionName, "BD_ACTOR", "deacon")
 
+	resolvedAgent := config.ResolveAgent(townRoot, "")
+	startupAdapter := agent.AdapterFor(resolvedAgent)
+
 	// Apply Deacon theme (non-fatal: theming failure doesn't affect operation)
 	// Note: ConfigureGasTownSession includes cycle bindings
 	theme := tmux.DeaconTheme()
@@ -302,10 +305,11 @@ func startDeaconSession(t *tmux.Tmux, sessionName string) error {
 		return fmt.Errorf("sending command: %w", err)
 	}
 
-	// Wait for Claude to start (non-fatal)
-	if err := t.WaitForCommand(sessionName, constants.SupportedShells, constants.ClaudeStartTimeout); err != nil {
+	// Wait for the agent to start (non-fatal)
+	if err := t.WaitForCommand(sessionName, constants.SupportedShells, startupAdapter.StartTimeout()); err != nil {
 		// Non-fatal
 	}
+	_ = startupAdapter.AcceptStartupWarnings(t, sessionName)
 	time.Sleep(constants.ShutdownNotifyDelay)
 
 	// Inject startup nudge for predecessor discovery via /resume
@@ -907,4 +911,3 @@ func updateAgentBeadState(townRoot, agent, state, _ string) { // reason unused b
 	cmd.Dir = townRoot
 	_ = cmd.Run() // Best effort
 }
-

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/steveyegge/gastown/internal/claude"
+	"github.com/steveyegge/gastown/internal/agent"
 	"github.com/steveyegge/gastown/internal/config"
 	"github.com/steveyegge/gastown/internal/constants"
 	"github.com/steveyegge/gastown/internal/rig"
@@ -120,6 +120,10 @@ func (m *Manager) Start(polecat string, opts StartOptions) error {
 		return fmt.Errorf("%w: %s", ErrPolecatNotFound, polecat)
 	}
 
+	townRoot := filepath.Dir(m.rig.Path)
+	resolvedAgent := config.ResolveAgent(townRoot, m.rig.Path)
+	startupAdapter := agent.AdapterFor(resolvedAgent)
+
 	sessionID := m.SessionName(polecat)
 
 	// Check if session already exists
@@ -138,7 +142,7 @@ func (m *Manager) Start(polecat string, opts StartOptions) error {
 	}
 
 	// Ensure Claude settings exist (autonomous role needs mail in SessionStart)
-	if err := claude.EnsureSettingsForRole(workDir, "polecat"); err != nil {
+	if err := startupAdapter.EnsureRoleSettings(workDir, "polecat"); err != nil {
 		return fmt.Errorf("ensuring Claude settings: %w", err)
 	}
 
@@ -161,7 +165,6 @@ func (m *Manager) Start(polecat string, opts StartOptions) error {
 	// Town beads use hq- prefix and store hooks, mail, and cross-rig coordination.
 	// BEADS_NO_DAEMON=1 prevents daemon from committing to wrong branch.
 	// Using town-level beads ensures gt prime and bd commands can find hooked work.
-	townRoot := filepath.Dir(m.rig.Path) // Town root is parent of rig directory
 	beadsDir := filepath.Join(townRoot, ".beads")
 	debugSession("SetEnvironment BEADS_DIR", m.tmux.SetEnvironment(sessionID, "BEADS_DIR", beadsDir))
 	debugSession("SetEnvironment BEADS_NO_DAEMON", m.tmux.SetEnvironment(sessionID, "BEADS_NO_DAEMON", "1"))
@@ -198,19 +201,19 @@ func (m *Manager) Start(polecat string, opts StartOptions) error {
 	}
 
 	// Wait for Claude to start (non-fatal: session continues even if this times out)
-	debugSession("WaitForCommand", m.tmux.WaitForCommand(sessionID, constants.SupportedShells, constants.ClaudeStartTimeout))
+	debugSession("WaitForCommand", m.tmux.WaitForCommand(sessionID, constants.SupportedShells, startupAdapter.StartTimeout()))
 
 	// Accept bypass permissions warning dialog if it appears.
 	// When Claude starts with --dangerously-skip-permissions, it shows a warning that
 	// requires pressing Down to select "Yes, I accept" and Enter to confirm.
 	// This is needed for automated polecat startup.
-	debugSession("AcceptBypassPermissionsWarning", m.tmux.AcceptBypassPermissionsWarning(sessionID))
+	debugSession("AcceptStartupWarnings", startupAdapter.AcceptStartupWarnings(m.tmux, sessionID))
 
 	// Wait for Claude to be fully ready at the prompt (not just started)
 	// PRAGMATIC APPROACH: Use fixed delay rather than detection.
 	// WaitForClaudeReady has false positives (detects > in various contexts).
 	// Claude startup takes ~5-8 seconds on typical machines.
-	// Reduced from 10s to 8s since AcceptBypassPermissionsWarning already adds ~1.2s.
+	// Reduced from 10s to 8s since startup warning handling already adds ~1.2s.
 	time.Sleep(8 * time.Second)
 
 	// Inject startup nudge for predecessor discovery via /resume

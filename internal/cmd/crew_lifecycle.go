@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/steveyegge/gastown/internal/agent"
 	"github.com/steveyegge/gastown/internal/beads"
 	"github.com/steveyegge/gastown/internal/config"
 	"github.com/steveyegge/gastown/internal/constants"
@@ -209,6 +210,10 @@ func runCrewRefresh(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("getting crew worker: %w", err)
 	}
 
+	townRoot := filepath.Dir(r.Path)
+	resolvedAgent := config.ResolveAgent(townRoot, r.Path)
+	startupAdapter := agent.AdapterFor(resolvedAgent)
+
 	t := tmux.NewTmux()
 	sessionID := crewSessionName(r.Name, name)
 
@@ -269,19 +274,19 @@ func runCrewRefresh(cmd *cobra.Command, args []string) error {
 		Topic:     "refresh",
 	})
 
-	// Start claude with environment exports and beacon as initial prompt
+	// Start the configured agent with environment exports and beacon as initial prompt
 	// Refresh uses regular permissions (no --dangerously-skip-permissions)
 	// SessionStart hook handles context loading (gt prime --hook)
 	claudeCmd := config.BuildCrewStartupCommand(r.Name, name, r.Path, beacon)
 	// Remove --dangerously-skip-permissions for refresh (interactive mode)
 	claudeCmd = strings.Replace(claudeCmd, " --dangerously-skip-permissions", "", 1)
 	if err := t.SendKeys(sessionID, claudeCmd); err != nil {
-		return fmt.Errorf("starting claude: %w", err)
+		return fmt.Errorf("starting agent: %w", err)
 	}
 
 	// Wait for Claude to start (optional, for status feedback)
 	shells := constants.SupportedShells
-	if err := t.WaitForCommand(sessionID, shells, constants.ClaudeStartTimeout); err != nil {
+	if err := t.WaitForCommand(sessionID, shells, startupAdapter.StartTimeout()); err != nil {
 		// Non-fatal
 	}
 
@@ -402,6 +407,9 @@ func runCrewRestart(cmd *cobra.Command, args []string) error {
 
 		t := tmux.NewTmux()
 		sessionID := crewSessionName(r.Name, name)
+		townRoot := filepath.Dir(r.Path)
+		resolvedAgent := config.ResolveAgent(townRoot, r.Path)
+		startupAdapter := agent.AdapterFor(resolvedAgent)
 
 		// Kill existing session if running
 		if hasSession, _ := t.HasSession(sessionID); hasSession {
@@ -442,21 +450,22 @@ func runCrewRestart(cmd *cobra.Command, args []string) error {
 			Topic:     "restart",
 		})
 
-		// Start claude with environment exports and beacon as initial prompt
+		// Start the configured agent with environment exports and beacon as initial prompt
 		// SessionStart hook handles context loading (gt prime --hook)
 		// The startup protocol tells agent to check mail/hook, no explicit prompt needed
 		claudeCmd := config.BuildCrewStartupCommand(r.Name, name, r.Path, beacon)
 		if err := t.SendKeys(sessionID, claudeCmd); err != nil {
-			fmt.Printf("Error starting claude for %s: %v\n", arg, err)
+			fmt.Printf("Error starting agent for %s: %v\n", arg, err)
 			lastErr = err
 			continue
 		}
 
 		// Wait for Claude to start (optional, for status feedback)
 		shells := constants.SupportedShells
-		if err := t.WaitForCommand(sessionID, shells, constants.ClaudeStartTimeout); err != nil {
-			style.PrintWarning("Timeout waiting for Claude to start for %s: %v", arg, err)
+		if err := t.WaitForCommand(sessionID, shells, startupAdapter.StartTimeout()); err != nil {
+			style.PrintWarning("Timeout waiting for agent to start for %s: %v", arg, err)
 		}
+		_ = startupAdapter.AcceptStartupWarnings(t, sessionID)
 
 		fmt.Printf("%s Restarted crew workspace: %s/%s\n",
 			style.Bold.Render("✓"), r.Name, name)
@@ -569,6 +578,10 @@ func runCrewRestartAll() error {
 func restartCrewSession(rigName, crewName, clonePath string) error {
 	t := tmux.NewTmux()
 	sessionID := crewSessionName(rigName, crewName)
+	rigPath := filepath.Dir(filepath.Dir(clonePath))
+	townRoot := filepath.Dir(rigPath)
+	resolvedAgent := config.ResolveAgent(townRoot, rigPath)
+	startupAdapter := agent.AdapterFor(resolvedAgent)
 
 	// Kill existing session if running
 	if hasSession, _ := t.HasSession(sessionID); hasSession {
@@ -600,18 +613,19 @@ func restartCrewSession(rigName, crewName, clonePath string) error {
 		Topic:     "restart",
 	})
 
-	// Start claude with environment exports and beacon as initial prompt
+	// Start the configured agent with environment exports and beacon as initial prompt
 	// SessionStart hook handles context loading (gt prime --hook)
 	claudeCmd := config.BuildCrewStartupCommand(rigName, crewName, "", beacon)
 	if err := t.SendKeys(sessionID, claudeCmd); err != nil {
-		return fmt.Errorf("starting claude: %w", err)
+		return fmt.Errorf("starting agent: %w", err)
 	}
 
 	// Wait for Claude to start (optional, for status feedback)
 	shells := constants.SupportedShells
-	if err := t.WaitForCommand(sessionID, shells, constants.ClaudeStartTimeout); err != nil {
+	if err := t.WaitForCommand(sessionID, shells, startupAdapter.StartTimeout()); err != nil {
 		// Non-fatal warning
 	}
+	_ = startupAdapter.AcceptStartupWarnings(t, sessionID)
 
 	return nil
 }

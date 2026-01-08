@@ -248,16 +248,16 @@ func TestEnsureSessionFresh_ZombieSession(t *testing.T) {
 	// Clean up any existing session
 	_ = tm.KillSession(sessionName)
 
-	// Create a zombie session (session exists but no Claude/node running)
+	// Create a zombie session (session exists but no agent running)
 	// A normal tmux session with bash/zsh is a "zombie" for our purposes
 	if err := tm.NewSession(sessionName, ""); err != nil {
 		t.Fatalf("NewSession: %v", err)
 	}
 	defer func() { _ = tm.KillSession(sessionName) }()
 
-	// Verify it's a zombie (not running Claude/node)
-	if tm.IsClaudeRunning(sessionName) {
-		t.Skip("session unexpectedly has Claude running - can't test zombie case")
+	// Verify it's a zombie (not running an agent)
+	if tm.IsAgentRunning(sessionName) {
+		t.Skip("session unexpectedly has an agent running - can't test zombie case")
 	}
 
 	// EnsureSessionFresh should kill the zombie and create fresh session

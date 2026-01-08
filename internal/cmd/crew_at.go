@@ -146,24 +146,24 @@ func runCrewAt(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("getting pane ID: %w", err)
 		}
 
-		// Use respawn-pane to replace shell with Claude directly
-		// This gives cleaner lifecycle: Claude exits → session ends (no intermediate shell)
-		// Pass "gt prime" as initial prompt so Claude loads context immediately
+		// Use respawn-pane to replace shell with the agent directly
+		// This gives cleaner lifecycle: agent exits → session ends (no intermediate shell)
+		// Pass "gt prime" as initial prompt so the agent loads context immediately
 		// Export GT_ROLE and BD_ACTOR since tmux SetEnvironment only affects new panes
 		claudeCmd := config.BuildCrewStartupCommand(r.Name, name, r.Path, "gt prime")
 		if err := t.RespawnPane(paneID, claudeCmd); err != nil {
-			return fmt.Errorf("starting claude: %w", err)
+			return fmt.Errorf("starting agent: %w", err)
 		}
 
 		fmt.Printf("%s Created session for %s/%s\n",
 			style.Bold.Render("✓"), r.Name, name)
 	} else {
-		// Session exists - check if Claude is still running
+		// Session exists - check if the agent is still running
 		// Uses both pane command check and UI marker detection to avoid
 		// restarting when user is in a subshell spawned from Claude
-		if !t.IsClaudeRunning(sessionID) {
-			// Claude has exited, restart it using respawn-pane
-			fmt.Printf("Claude exited, restarting...\n")
+		if !t.IsAgentRunning(sessionID) {
+			// Agent has exited, restart it using respawn-pane
+			fmt.Printf("Agent exited, restarting...\n")
 
 			// Get pane ID for respawn
 			paneID, err := t.GetPaneID(sessionID)
@@ -171,12 +171,12 @@ func runCrewAt(cmd *cobra.Command, args []string) error {
 				return fmt.Errorf("getting pane ID: %w", err)
 			}
 
-			// Use respawn-pane to replace shell with Claude directly
-			// Pass "gt prime" as initial prompt so Claude loads context immediately
+			// Use respawn-pane to replace shell with the agent directly
+			// Pass "gt prime" as initial prompt so the agent loads context immediately
 			// Export GT_ROLE and BD_ACTOR since tmux SetEnvironment only affects new panes
 			claudeCmd := config.BuildCrewStartupCommand(r.Name, name, r.Path, "gt prime")
 			if err := t.RespawnPane(paneID, claudeCmd); err != nil {
-				return fmt.Errorf("restarting claude: %w", err)
+				return fmt.Errorf("restarting agent: %w", err)
 			}
 		}
 	}

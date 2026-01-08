@@ -10,13 +10,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/steveyegge/gastown/internal/config"
 	"github.com/steveyegge/gastown/internal/constants"
 )
 
 // Common errors
 var (
-	ErrNoServer       = errors.New("no tmux server running")
-	ErrSessionExists  = errors.New("session already exists")
+	ErrNoServer        = errors.New("no tmux server running")
+	ErrSessionExists   = errors.New("session already exists")
 	ErrSessionNotFound = errors.New("session not found")
 )
 
@@ -77,12 +78,12 @@ func (t *Tmux) NewSession(name, workDir string) error {
 }
 
 // EnsureSessionFresh ensures a session is available and healthy.
-// If the session exists but is a zombie (Claude not running), it kills the session first.
+// If the session exists but is a zombie (agent not running), it kills the session first.
 // This prevents "session already exists" errors when trying to restart dead agents.
 //
 // A session is considered a zombie if:
 // - The tmux session exists
-// - But Claude (node process) is not running in it
+// - But the agent process is not running in it
 //
 // Returns nil if session was created successfully.
 func (t *Tmux) EnsureSessionFresh(name, workDir string) error {
@@ -94,14 +95,14 @@ func (t *Tmux) EnsureSessionFresh(name, workDir string) error {
 
 	if exists {
 		// Session exists - check if it's a zombie
-		if !t.IsClaudeRunning(name) {
-			// Zombie session: tmux alive but Claude dead
+		if !t.IsAgentRunning(name) {
+			// Zombie session: tmux alive but agent dead
 			// Kill it so we can create a fresh one
 			if err := t.KillSession(name); err != nil {
 				return fmt.Errorf("killing zombie session: %w", err)
 			}
 		} else {
-			// Session is healthy (Claude running) - nothing to do
+			// Session is healthy (agent running) - nothing to do
 			return nil
 		}
 	}
@@ -390,8 +391,8 @@ func (t *Tmux) GetPaneWorkDir(session string) (string, error) {
 
 // FindSessionByWorkDir finds tmux sessions where the pane's current working directory
 // matches or is under the target directory. Returns session names that match.
-// If checkClaude is true, only returns sessions that have Claude (node) running.
-func (t *Tmux) FindSessionByWorkDir(targetDir string, checkClaude bool) ([]string, error) {
+// If checkAgent is true, only returns sessions that have a known agent process running.
+func (t *Tmux) FindSessionByWorkDir(targetDir string, checkAgent bool) ([]string, error) {
 	sessions, err := t.ListSessions()
 	if err != nil {
 		return nil, err
@@ -410,9 +411,9 @@ func (t *Tmux) FindSessionByWorkDir(targetDir string, checkClaude bool) ([]strin
 
 		// Check if workdir matches target (exact match or subdir)
 		if workDir == targetDir || strings.HasPrefix(workDir, targetDir+"/") {
-			if checkClaude {
-				// Only include if Claude is running
-				if t.IsClaudeRunning(session) {
+			if checkAgent {
+				// Only include if an agent is running
+				if t.IsAgentRunning(session) {
 					matches = append(matches, session)
 				}
 			} else {
@@ -526,15 +527,20 @@ Run: gt mail inbox
 	return t.SendKeys(session, banner)
 }
 
-// IsClaudeRunning checks if Claude appears to be running in the session.
+// IsAgentRunning checks if a known agent appears to be running in the session.
 // Only trusts the pane command - UI markers in scrollback cause false positives.
-func (t *Tmux) IsClaudeRunning(session string) bool {
-	// Check pane command - Claude runs as node
+func (t *Tmux) IsAgentRunning(session string) bool {
 	cmd, err := t.GetPaneCommand(session)
 	if err != nil {
 		return false
 	}
-	return cmd == "node"
+
+	for _, name := range config.KnownAgentProcessNames() {
+		if cmd == name {
+			return true
+		}
+	}
+	return false
 }
 
 // WaitForCommand polls until the pane is NOT running one of the excluded commands.
@@ -595,14 +601,16 @@ func (t *Tmux) WaitForShellReady(session string, timeout time.Duration) error {
 // ZFC (Zero False Commands) principle: AI should observe AI, not regex.
 //
 // Bootstrap (acceptable):
-//   During cold startup when no AI agent is running, the daemon uses this
-//   function to get the Deacon online. Regex is acceptable here.
+//
+//	During cold startup when no AI agent is running, the daemon uses this
+//	function to get the Deacon online. Regex is acceptable here.
 //
 // Steady-State (use AI observation instead):
-//   Once any AI agent is running, observation should be AI-to-AI:
-//   - Deacon starting polecats → use 'gt deacon pending' + AI analysis
-//   - Deacon restarting → Mayor watches via 'gt peek'
-//   - Mayor restarting → Deacon watches via 'gt peek'
+//
+//	Once any AI agent is running, observation should be AI-to-AI:
+//	- Deacon starting polecats → use 'gt deacon pending' + AI analysis
+//	- Deacon restarting → Mayor watches via 'gt peek'
+//	- Mayor restarting → Deacon watches via 'gt peek'
 //
 // See: gt deacon pending (ZFC-compliant AI observation)
 // See: gt deacon trigger-pending (bootstrap mode, regex-based)
