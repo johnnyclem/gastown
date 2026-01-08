@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/steveyegge/gastown/internal/claude"
+	"github.com/steveyegge/gastown/internal/agent"
 	"github.com/steveyegge/gastown/internal/config"
 	"github.com/steveyegge/gastown/internal/constants"
 	"github.com/steveyegge/gastown/internal/rig"
@@ -289,6 +289,9 @@ func witnessSessionName(rigName string) string {
 func ensureWitnessSession(rigName string, r *rig.Rig) (bool, error) {
 	t := tmux.NewTmux()
 	sessionName := witnessSessionName(rigName)
+	townRoot := filepath.Dir(r.Path)
+	resolvedAgent := config.ResolveAgent(townRoot, r.Path)
+	startupAdapter := agent.AdapterFor(resolvedAgent)
 
 	// Check if session already exists
 	running, err := t.HasSession(sessionName)
@@ -297,13 +300,13 @@ func ensureWitnessSession(rigName string, r *rig.Rig) (bool, error) {
 	}
 
 	if running {
-		// Session exists - check if Claude is actually running (healthy vs zombie)
-		if t.IsClaudeRunning(sessionName) {
-			// Healthy - Claude is running
+		// Session exists - check if agent is actually running (healthy vs zombie)
+		if t.IsAgentRunning(sessionName) {
+			// Healthy - agent is running
 			return false, nil
 		}
-		// Zombie - tmux alive but Claude dead. Kill and recreate.
-		fmt.Printf("%s Detected zombie session (tmux alive, Claude dead). Recreating...\n", style.Dim.Render("⚠"))
+		// Zombie - tmux alive but agent dead. Kill and recreate.
+		fmt.Printf("%s Detected zombie session (tmux alive, agent dead). Recreating...\n", style.Dim.Render("⚠"))
 		if err := t.KillSession(sessionName); err != nil {
 			return false, fmt.Errorf("killing zombie session: %w", err)
 		}
@@ -321,9 +324,9 @@ func ensureWitnessSession(rigName string, r *rig.Rig) (bool, error) {
 		}
 	}
 
-	// Ensure Claude settings exist (autonomous role needs mail in SessionStart)
-	if err := claude.EnsureSettingsForRole(witnessDir, "witness"); err != nil {
-		return false, fmt.Errorf("ensuring Claude settings: %w", err)
+	// Ensure settings exist (autonomous role needs mail in SessionStart)
+	if err := startupAdapter.EnsureRoleSettings(witnessDir, "witness"); err != nil {
+		return false, fmt.Errorf("ensuring settings: %w", err)
 	}
 
 	// Create new tmux session
@@ -341,7 +344,7 @@ func ensureWitnessSession(rigName string, r *rig.Rig) (bool, error) {
 	theme := tmux.AssignTheme(rigName)
 	_ = t.ConfigureGasTownSession(sessionName, theme, rigName, "witness", "witness")
 
-	// Launch Claude directly (no shell respawn loop)
+	// Launch the configured agent directly (no shell respawn loop)
 	// Restarts are handled by daemon via LIFECYCLE mail or deacon health-scan
 	// NOTE: No gt prime injection needed - SessionStart hook handles it automatically
 	// Export GT_ROLE and BD_ACTOR in the command since tmux SetEnvironment only affects new panes
@@ -349,10 +352,11 @@ func ensureWitnessSession(rigName string, r *rig.Rig) (bool, error) {
 		return false, fmt.Errorf("sending command: %w", err)
 	}
 
-	// Wait for Claude to start (non-fatal)
-	if err := t.WaitForCommand(sessionName, constants.SupportedShells, constants.ClaudeStartTimeout); err != nil {
+	// Wait for the agent to start (non-fatal)
+	if err := t.WaitForCommand(sessionName, constants.SupportedShells, startupAdapter.StartTimeout()); err != nil {
 		// Non-fatal
 	}
+	_ = startupAdapter.AcceptStartupWarnings(t, sessionName)
 	time.Sleep(constants.ShutdownNotifyDelay)
 
 	// Inject startup nudge for predecessor discovery via /resume

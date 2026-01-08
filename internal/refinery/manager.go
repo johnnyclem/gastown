@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/steveyegge/gastown/internal/agent"
 	"github.com/steveyegge/gastown/internal/beads"
-	"github.com/steveyegge/gastown/internal/claude"
 	"github.com/steveyegge/gastown/internal/config"
 	"github.com/steveyegge/gastown/internal/events"
 	"github.com/steveyegge/gastown/internal/mail"
@@ -24,9 +24,9 @@ import (
 
 // Common errors
 var (
-	ErrNotRunning    = errors.New("refinery not running")
+	ErrNotRunning     = errors.New("refinery not running")
 	ErrAlreadyRunning = errors.New("refinery already running")
-	ErrNoQueue       = errors.New("no items in queue")
+	ErrNoQueue        = errors.New("no items in queue")
 )
 
 // Manager handles refinery lifecycle and queue operations.
@@ -101,7 +101,7 @@ func (m *Manager) Status() (*Refinery, error) {
 
 // Start starts the refinery.
 // If foreground is true, runs in the current process (blocking) using the Go-based polling loop.
-// Otherwise, spawns a Claude agent in a tmux session to process the merge queue.
+// Otherwise, spawns an agent in a tmux session to process the merge queue.
 func (m *Manager) Start(foreground bool) error {
 	ref, err := m.loadState()
 	if err != nil {
@@ -110,6 +110,9 @@ func (m *Manager) Start(foreground bool) error {
 
 	t := tmux.NewTmux()
 	sessionID := m.sessionName()
+	townRoot := filepath.Dir(m.rig.Path)
+	resolvedAgent := config.ResolveAgent(townRoot, m.rig.Path)
+	startupAdapter := agent.AdapterFor(resolvedAgent)
 
 	if foreground {
 		// In foreground mode, we're likely running inside the tmux session
@@ -135,13 +138,13 @@ func (m *Manager) Start(foreground bool) error {
 	// Background mode: check if session already exists
 	running, _ := t.HasSession(sessionID)
 	if running {
-		// Session exists - check if Claude is actually running (healthy vs zombie)
-		if t.IsClaudeRunning(sessionID) {
-			// Healthy - Claude is running
+		// Session exists - check if the agent is actually running (healthy vs zombie)
+		if t.IsAgentRunning(sessionID) {
+			// Healthy - agent is running
 			return ErrAlreadyRunning
 		}
-		// Zombie - tmux alive but Claude dead. Kill and recreate.
-		_, _ = fmt.Fprintln(m.output, "⚠ Detected zombie session (tmux alive, Claude dead). Recreating...")
+		// Zombie - tmux alive but agent dead. Kill and recreate.
+		_, _ = fmt.Fprintln(m.output, "⚠ Detected zombie session (tmux alive, agent dead). Recreating...")
 		if err := t.KillSession(sessionID); err != nil {
 			return fmt.Errorf("killing zombie session: %w", err)
 		}
@@ -152,8 +155,8 @@ func (m *Manager) Start(foreground bool) error {
 		return ErrAlreadyRunning
 	}
 
-	// Background mode: spawn a Claude agent in a tmux session
-	// The Claude agent handles MR processing using git commands and beads
+	// Background mode: spawn an agent in a tmux session
+	// The agent handles MR processing using git commands and beads
 
 	// Working directory is the refinery worktree (shares .git with mayor/polecats)
 	refineryRigDir := filepath.Join(m.rig.Path, "refinery", "rig")
@@ -162,9 +165,9 @@ func (m *Manager) Start(foreground bool) error {
 		refineryRigDir = m.workDir
 	}
 
-	// Ensure Claude settings exist (autonomous role needs mail in SessionStart)
-	if err := claude.EnsureSettingsForRole(refineryRigDir, "refinery"); err != nil {
-		return fmt.Errorf("ensuring Claude settings: %w", err)
+	// Ensure settings exist (autonomous role needs mail in SessionStart)
+	if err := startupAdapter.EnsureRoleSettings(refineryRigDir, "refinery"); err != nil {
+		return fmt.Errorf("ensuring settings: %w", err)
 	}
 
 	if err := t.NewSession(sessionID, refineryRigDir); err != nil {
@@ -192,13 +195,13 @@ func (m *Manager) Start(foreground bool) error {
 	now := time.Now()
 	ref.State = StateRunning
 	ref.StartedAt = &now
-	ref.PID = 0 // Claude agent doesn't have a PID we track
+	ref.PID = 0 // Agent doesn't have a PID we track
 	if err := m.saveState(ref); err != nil {
 		_ = t.KillSession(sessionID) // best-effort cleanup on state save failure
 		return fmt.Errorf("saving state: %w", err)
 	}
 
-	// Start Claude agent with full permissions (like polecats)
+	// Start the configured agent with full permissions (like polecats)
 	// NOTE: No gt prime injection needed - SessionStart hook handles it automatically
 	// Restarts are handled by daemon via LIFECYCLE mail, not shell loops
 	// Export GT_ROLE and BD_ACTOR in the command since tmux SetEnvironment only affects new panes
@@ -206,7 +209,7 @@ func (m *Manager) Start(foreground bool) error {
 	if err := t.SendKeys(sessionID, command); err != nil {
 		// Clean up the session on failure (best-effort cleanup)
 		_ = t.KillSession(sessionID)
-		return fmt.Errorf("starting Claude agent: %w", err)
+		return fmt.Errorf("starting agent: %w", err)
 	}
 
 	return nil
@@ -401,14 +404,14 @@ func parseTime(s string) time.Time {
 }
 
 // run is deprecated - foreground mode now just prints a message.
-// The Refinery agent (Claude) handles all merge processing.
+// The Refinery agent handles all merge processing.
 // See: ZFC #5 - Move merge/conflict decisions from Go to Refinery agent
 func (m *Manager) run(_ *Refinery) error { // ref unused: deprecated function
 	_, _ = fmt.Fprintln(m.output, "")
 	_, _ = fmt.Fprintln(m.output, "╔══════════════════════════════════════════════════════════════╗")
 	_, _ = fmt.Fprintln(m.output, "║  Foreground mode is deprecated.                              ║")
 	_, _ = fmt.Fprintln(m.output, "║                                                              ║")
-	_, _ = fmt.Fprintln(m.output, "║  The Refinery agent (Claude) handles all merge decisions.   ║")
+	_, _ = fmt.Fprintln(m.output, "║  The Refinery agent handles all merge decisions.            ║")
 	_, _ = fmt.Fprintln(m.output, "║  Use 'gt refinery start' to run in background mode.         ║")
 	_, _ = fmt.Fprintln(m.output, "╚══════════════════════════════════════════════════════════════╝")
 	_, _ = fmt.Fprintln(m.output, "")
@@ -437,7 +440,7 @@ type MergeResult struct {
 // This function is kept for backwards compatibility but always returns an error
 // indicating that the agent should handle merge processing.
 //
-// Deprecated: Use the Refinery agent (Claude) for merge processing.
+// Deprecated: Use the Refinery agent for merge processing.
 func (m *Manager) ProcessMR(mr *MergeRequest) MergeResult {
 	return MergeResult{
 		Error: "ProcessMR is deprecated - the Refinery agent handles merge processing (ZFC #5)",
@@ -538,7 +541,6 @@ func (m *Manager) pushWithRetry(targetBranch string, config MergeConfig) error {
 	return fmt.Errorf("push failed after %d retries: %v", config.PushRetryCount, lastErr)
 }
 
-
 // formatAge formats a duration since the given time.
 func formatAge(t time.Time) string {
 	d := time.Since(t)
@@ -559,8 +561,8 @@ func formatAge(t time.Time) string {
 func (m *Manager) notifyWorkerConflict(mr *MergeRequest) {
 	router := mail.NewRouter(m.workDir)
 	msg := &mail.Message{
-		From: fmt.Sprintf("%s/refinery", m.rig.Name),
-		To:   fmt.Sprintf("%s/%s", m.rig.Name, mr.Worker),
+		From:    fmt.Sprintf("%s/refinery", m.rig.Name),
+		To:      fmt.Sprintf("%s/%s", m.rig.Name, mr.Worker),
 		Subject: "Merge conflict - rebase required",
 		Body: fmt.Sprintf(`Your branch %s has conflicts with %s.
 
@@ -580,8 +582,8 @@ Then the Refinery will retry the merge.`,
 func (m *Manager) notifyWorkerMerged(mr *MergeRequest) {
 	router := mail.NewRouter(m.workDir)
 	msg := &mail.Message{
-		From: fmt.Sprintf("%s/refinery", m.rig.Name),
-		To:   fmt.Sprintf("%s/%s", m.rig.Name, mr.Worker),
+		From:    fmt.Sprintf("%s/refinery", m.rig.Name),
+		To:      fmt.Sprintf("%s/%s", m.rig.Name, mr.Worker),
 		Subject: "Work merged successfully",
 		Body: fmt.Sprintf(`Your branch %s has been merged to %s.
 

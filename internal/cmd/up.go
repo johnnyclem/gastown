@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/steveyegge/gastown/internal/agent"
 	"github.com/steveyegge/gastown/internal/beads"
 	"github.com/steveyegge/gastown/internal/config"
 	"github.com/steveyegge/gastown/internal/constants"
@@ -236,6 +237,9 @@ func ensureDaemon(townRoot string) error {
 
 // ensureSession starts a Claude session if not running.
 func ensureSession(t *tmux.Tmux, sessionName, workDir, role string) error {
+	resolvedAgent := config.ResolveAgent(workDir, "")
+	startupAdapter := agent.AdapterFor(resolvedAgent)
+
 	running, err := t.HasSession(sessionName)
 	if err != nil {
 		return err
@@ -282,12 +286,12 @@ func ensureSession(t *tmux.Tmux, sessionName, workDir, role string) error {
 	// Note: Deacon respawn loop makes beacon tricky - Claude restarts multiple times
 	// For non-respawn (mayor), inject beacon
 	if role != "deacon" {
-		if err := t.WaitForCommand(sessionName, constants.SupportedShells, constants.ClaudeStartTimeout); err != nil {
+		if err := t.WaitForCommand(sessionName, constants.SupportedShells, startupAdapter.StartTimeout()); err != nil {
 			// Non-fatal
 		}
 
 		// Accept bypass permissions warning dialog if it appears.
-		_ = t.AcceptBypassPermissionsWarning(sessionName)
+		_ = startupAdapter.AcceptStartupWarnings(t, sessionName)
 
 		time.Sleep(constants.ShutdownNotifyDelay)
 
@@ -304,6 +308,10 @@ func ensureSession(t *tmux.Tmux, sessionName, workDir, role string) error {
 
 // ensureWitness starts a witness session for a rig.
 func ensureWitness(t *tmux.Tmux, sessionName, rigPath, rigName string) error {
+	townRoot := filepath.Dir(rigPath)
+	resolvedAgent := config.ResolveAgent(townRoot, rigPath)
+	startupAdapter := agent.AdapterFor(resolvedAgent)
+
 	running, err := t.HasSession(sessionName)
 	if err != nil {
 		return err
@@ -335,12 +343,12 @@ func ensureWitness(t *tmux.Tmux, sessionName, rigPath, rigName string) error {
 	}
 
 	// Wait for Claude to start (non-fatal)
-	if err := t.WaitForCommand(sessionName, constants.SupportedShells, constants.ClaudeStartTimeout); err != nil {
+	if err := t.WaitForCommand(sessionName, constants.SupportedShells, startupAdapter.StartTimeout()); err != nil {
 		// Non-fatal
 	}
 
 	// Accept bypass permissions warning dialog if it appears.
-	_ = t.AcceptBypassPermissionsWarning(sessionName)
+	_ = startupAdapter.AcceptStartupWarnings(t, sessionName)
 
 	time.Sleep(constants.ShutdownNotifyDelay)
 
@@ -541,6 +549,11 @@ func parseCrewStartupPreference(pref string, available []string) []string {
 
 // ensureCrewSession starts a crew session.
 func ensureCrewSession(t *tmux.Tmux, sessionName, crewPath, rigName, crewName string) error {
+	rigPath := filepath.Dir(filepath.Dir(crewPath))
+	townRoot := filepath.Dir(rigPath)
+	resolvedAgent := config.ResolveAgent(townRoot, rigPath)
+	startupAdapter := agent.AdapterFor(resolvedAgent)
+
 	// Create session in crew directory
 	if err := t.NewSession(sessionName, crewPath); err != nil {
 		return err
@@ -557,21 +570,19 @@ func ensureCrewSession(t *tmux.Tmux, sessionName, crewPath, rigName, crewName st
 	theme := tmux.AssignTheme(rigName)
 	_ = t.ConfigureGasTownSession(sessionName, theme, "", "Crew", crewName)
 
-	// Launch Claude using runtime config
-	// crewPath is like ~/gt/gastown/crew/max, so rig path is two dirs up
-	rigPath := filepath.Dir(filepath.Dir(crewPath))
+	// Launch the configured agent using runtime config
 	claudeCmd := config.BuildCrewStartupCommand(rigName, crewName, rigPath, "")
 	if err := t.SendKeysDelayed(sessionName, claudeCmd, 200); err != nil {
 		return err
 	}
 
-	// Wait for Claude to start (non-fatal)
-	if err := t.WaitForCommand(sessionName, constants.SupportedShells, constants.ClaudeStartTimeout); err != nil {
+	// Wait for the agent to start (non-fatal)
+	if err := t.WaitForCommand(sessionName, constants.SupportedShells, startupAdapter.StartTimeout()); err != nil {
 		// Non-fatal
 	}
 
 	// Accept bypass permissions warning dialog if it appears.
-	_ = t.AcceptBypassPermissionsWarning(sessionName)
+	_ = startupAdapter.AcceptStartupWarnings(t, sessionName)
 
 	time.Sleep(constants.ShutdownNotifyDelay)
 
@@ -649,6 +660,11 @@ func startPolecatsWithWork(t *tmux.Tmux, townRoot, rigName string) ([]string, ma
 
 // ensurePolecatSession starts a polecat session.
 func ensurePolecatSession(t *tmux.Tmux, sessionName, polecatPath, rigName, polecatName string) error {
+	rigPath := filepath.Dir(filepath.Dir(polecatPath))
+	townRoot := filepath.Dir(rigPath)
+	resolvedAgent := config.ResolveAgent(townRoot, rigPath)
+	startupAdapter := agent.AdapterFor(resolvedAgent)
+
 	// Create session in polecat directory
 	if err := t.NewSession(sessionName, polecatPath); err != nil {
 		return err
@@ -665,21 +681,20 @@ func ensurePolecatSession(t *tmux.Tmux, sessionName, polecatPath, rigName, polec
 	theme := tmux.AssignTheme(rigName)
 	_ = t.ConfigureGasTownSession(sessionName, theme, "", "Polecat", polecatName)
 
-	// Launch Claude using runtime config
+	// Launch the configured agent using runtime config
 	// polecatPath is like ~/gt/gastown/polecats/toast, so rig path is two dirs up
-	rigPath := filepath.Dir(filepath.Dir(polecatPath))
 	claudeCmd := config.BuildPolecatStartupCommand(rigName, polecatName, rigPath, "")
 	if err := t.SendKeysDelayed(sessionName, claudeCmd, 200); err != nil {
 		return err
 	}
 
-	// Wait for Claude to start (non-fatal)
-	if err := t.WaitForCommand(sessionName, constants.SupportedShells, constants.ClaudeStartTimeout); err != nil {
+	// Wait for the agent to start (non-fatal)
+	if err := t.WaitForCommand(sessionName, constants.SupportedShells, startupAdapter.StartTimeout()); err != nil {
 		// Non-fatal
 	}
 
 	// Accept bypass permissions warning dialog if it appears.
-	_ = t.AcceptBypassPermissionsWarning(sessionName)
+	_ = startupAdapter.AcceptStartupWarnings(t, sessionName)
 
 	time.Sleep(constants.ShutdownNotifyDelay)
 

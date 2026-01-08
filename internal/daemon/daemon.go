@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gofrs/flock"
+	"github.com/steveyegge/gastown/internal/agent"
 	"github.com/steveyegge/gastown/internal/beads"
 	"github.com/steveyegge/gastown/internal/boot"
 	"github.com/steveyegge/gastown/internal/config"
@@ -321,8 +322,8 @@ func (d *Daemon) ensureDeaconRunning() {
 		deaconSession := d.getDeaconSessionName()
 		hasSession, sessionErr := d.tmux.HasSession(deaconSession)
 		if sessionErr == nil && hasSession {
-			if d.tmux.IsClaudeRunning(deaconSession) {
-				d.logger.Println("Deacon session healthy (Claude running), skipping restart despite stale bead")
+			if d.tmux.IsAgentRunning(deaconSession) {
+				d.logger.Println("Deacon session healthy (agent running), skipping restart despite stale bead")
 				return
 			}
 		}
@@ -451,11 +452,11 @@ func (d *Daemon) ensureWitnessRunning(rigName string) {
 	if beadState != "dead" {
 		hasSession, sessionErr := d.tmux.HasSession(sessionName)
 		if sessionErr == nil && hasSession {
-			// Session exists - check if Claude is actually running in it
-			if d.tmux.IsClaudeRunning(sessionName) {
+			// Session exists - check if an agent is actually running in it
+			if d.tmux.IsAgentRunning(sessionName) {
 				// Session is healthy - don't restart it
 				// The bead state may be stale; agent will update it on next activity
-				d.logger.Printf("Witness for %s session healthy (Claude running), skipping restart despite stale bead", rigName)
+				d.logger.Printf("Witness for %s session healthy (agent running), skipping restart despite stale bead", rigName)
 				return
 			}
 		}
@@ -538,11 +539,11 @@ func (d *Daemon) ensureRefineryRunning(rigName string) {
 	if beadState != "dead" {
 		hasSession, sessionErr := d.tmux.HasSession(sessionName)
 		if sessionErr == nil && hasSession {
-			// Session exists - check if Claude is actually running in it
-			if d.tmux.IsClaudeRunning(sessionName) {
+			// Session exists - check if an agent is actually running in it
+			if d.tmux.IsAgentRunning(sessionName) {
 				// Session is healthy - don't restart it
 				// The bead state may be stale; agent will update it on next activity
-				d.logger.Printf("Refinery for %s session healthy (Claude running), skipping restart despite stale bead", rigName)
+				d.logger.Printf("Refinery for %s session healthy (agent running), skipping restart despite stale bead", rigName)
 				return
 			}
 		}
@@ -559,8 +560,11 @@ func (d *Daemon) ensureRefineryRunning(rigName string) {
 		refineryDir = rigPath
 	}
 
+	resolvedAgent := config.ResolveAgent(d.config.TownRoot, rigPath)
+	startupAdapter := agent.AdapterFor(resolvedAgent)
+
 	// Create session in refinery directory
-	// Use EnsureSessionFresh to handle zombie sessions that exist but have dead Claude
+	// Use EnsureSessionFresh to handle zombie sessions that exist but have dead agents
 	if err := d.tmux.EnsureSessionFresh(sessionName, refineryDir); err != nil {
 		d.logger.Printf("Error creating refinery session for %s: %v", rigName, err)
 		return
@@ -590,15 +594,15 @@ func (d *Daemon) ensureRefineryRunning(rigName string) {
 		"GIT_AUTHOR_NAME": bdActor,
 	}
 	if err := d.tmux.SendKeys(sessionName, config.BuildStartupCommand(envVars, "", "")); err != nil {
-		d.logger.Printf("Error launching Claude in refinery session for %s: %v", rigName, err)
+		d.logger.Printf("Error launching agent in refinery session for %s: %v", rigName, err)
 		return
 	}
 
-	// Wait for Claude to start, then accept bypass permissions warning if it appears.
-	if err := d.tmux.WaitForCommand(sessionName, constants.SupportedShells, constants.ClaudeStartTimeout); err != nil {
-		// Non-fatal - Claude might still start
+	// Wait for the agent to start, then accept startup warnings if needed.
+	if err := d.tmux.WaitForCommand(sessionName, constants.SupportedShells, startupAdapter.StartTimeout()); err != nil {
+		// Non-fatal - agent might still start
 	}
-	_ = d.tmux.AcceptBypassPermissionsWarning(sessionName)
+	_ = startupAdapter.AcceptStartupWarnings(d.tmux, sessionName)
 
 	d.logger.Printf("Refinery session for %s started successfully", rigName)
 }
@@ -860,6 +864,9 @@ func (d *Daemon) checkPolecatHealth(rigName, polecatName string) {
 func (d *Daemon) restartPolecatSession(rigName, polecatName, sessionName string) error {
 	// Determine working directory
 	workDir := filepath.Join(d.config.TownRoot, rigName, "polecats", polecatName)
+	rigPath := filepath.Join(d.config.TownRoot, rigName)
+	resolvedAgent := config.ResolveAgent(d.config.TownRoot, rigPath)
+	startupAdapter := agent.AdapterFor(resolvedAgent)
 
 	// Verify the worktree exists
 	if _, err := os.Stat(workDir); os.IsNotExist(err) {
@@ -870,7 +877,7 @@ func (d *Daemon) restartPolecatSession(rigName, polecatName, sessionName string)
 	d.syncWorkspace(workDir)
 
 	// Create new tmux session
-	// Use EnsureSessionFresh to handle zombie sessions that exist but have dead Claude
+	// Use EnsureSessionFresh to handle zombie sessions that exist but have dead agents
 	if err := d.tmux.EnsureSessionFresh(sessionName, workDir); err != nil {
 		return fmt.Errorf("creating session: %w", err)
 	}
@@ -896,18 +903,18 @@ func (d *Daemon) restartPolecatSession(rigName, polecatName, sessionName string)
 	agentID := fmt.Sprintf("%s/%s", rigName, polecatName)
 	_ = d.tmux.SetPaneDiedHook(sessionName, agentID)
 
-	// Launch Claude with environment exported inline
-	startCmd := config.BuildPolecatStartupCommand(rigName, polecatName, "", "")
+	// Launch the configured agent with environment exported inline
+	startCmd := config.BuildPolecatStartupCommand(rigName, polecatName, rigPath, "")
 	if err := d.tmux.SendKeys(sessionName, startCmd); err != nil {
 		return fmt.Errorf("sending startup command: %w", err)
 	}
 
-	// Wait for Claude to start, then accept bypass permissions warning if it appears.
+	// Wait for the agent to start, then accept startup warnings if needed.
 	// This ensures automated restarts aren't blocked by the warning dialog.
-	if err := d.tmux.WaitForCommand(sessionName, constants.SupportedShells, constants.ClaudeStartTimeout); err != nil {
-		// Non-fatal - Claude might still start
+	if err := d.tmux.WaitForCommand(sessionName, constants.SupportedShells, startupAdapter.StartTimeout()); err != nil {
+		// Non-fatal - agent might still start
 	}
-	_ = d.tmux.AcceptBypassPermissionsWarning(sessionName)
+	_ = startupAdapter.AcceptStartupWarnings(d.tmux, sessionName)
 
 	return nil
 }

@@ -32,6 +32,10 @@ type AgentPresetInfo struct {
 	// Command is the CLI binary to invoke.
 	Command string `json:"command"`
 
+	// ProcessName is the primary process name to look for when determining
+	// if an agent is running. Defaults to Command when omitted.
+	ProcessName string `json:"process_name,omitempty"`
+
 	// Args are the default command-line arguments for autonomous mode.
 	Args []string `json:"args"`
 
@@ -55,6 +59,10 @@ type AgentPresetInfo struct {
 	// SupportsForkSession indicates if --fork-session is available.
 	// Claude-only feature for seance command.
 	SupportsForkSession bool `json:"supports_fork_session,omitempty"`
+
+	// StartupTimeoutSeconds overrides the default startup timeout used when
+	// waiting for an agent to come online in tmux sessions.
+	StartupTimeoutSeconds int `json:"startup_timeout_seconds,omitempty"`
 
 	// NonInteractive contains settings for non-interactive mode.
 	NonInteractive *NonInteractiveConfig `json:"non_interactive,omitempty"`
@@ -90,6 +98,7 @@ var builtinPresets = map[AgentPreset]*AgentPresetInfo{
 	AgentClaude: {
 		Name:                AgentClaude,
 		Command:             "claude",
+		ProcessName:         "node",
 		Args:                []string{"--dangerously-skip-permissions"},
 		SessionIDEnv:        "CLAUDE_SESSION_ID",
 		ResumeFlag:          "--resume",
@@ -101,6 +110,7 @@ var builtinPresets = map[AgentPreset]*AgentPresetInfo{
 	AgentGemini: {
 		Name:                AgentGemini,
 		Command:             "gemini",
+		ProcessName:         "gemini",
 		Args:                []string{"--approval-mode", "yolo"},
 		SessionIDEnv:        "GEMINI_SESSION_ID",
 		ResumeFlag:          "--resume",
@@ -115,6 +125,7 @@ var builtinPresets = map[AgentPreset]*AgentPresetInfo{
 	AgentCodex: {
 		Name:                AgentCodex,
 		Command:             "codex",
+		ProcessName:         "codex",
 		Args:                []string{"--yolo"},
 		SessionIDEnv:        "", // Codex captures from JSONL output
 		ResumeFlag:          "resume",
@@ -233,6 +244,33 @@ func ListAgentPresets() []string {
 	defer registryMu.RUnlock()
 	names := make([]string, 0, len(globalRegistry.Agents))
 	for name := range globalRegistry.Agents {
+		names = append(names, name)
+	}
+	return names
+}
+
+// KnownAgentProcessNames returns a unique list of process names to check
+// when detecting if an agent session is running. Falls back to the command
+// name when process_name is not specified.
+func KnownAgentProcessNames() []string {
+	ensureRegistry()
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+
+	seen := make(map[string]struct{})
+	var names []string
+	for _, agent := range globalRegistry.Agents {
+		name := agent.ProcessName
+		if name == "" {
+			name = agent.Command
+		}
+		if name == "" {
+			continue
+		}
+		if _, ok := seen[name]; ok {
+			continue
+		}
+		seen[name] = struct{}{}
 		names = append(names, name)
 	}
 	return names
@@ -367,6 +405,7 @@ func NewExampleAgentRegistry() *AgentRegistry {
 			"my-custom-agent": {
 				Name:         "my-custom-agent",
 				Command:      "my-agent-cli",
+				ProcessName:  "my-agent-cli",
 				Args:         []string{"--autonomous", "--no-confirm"},
 				SessionIDEnv: "MY_AGENT_SESSION_ID",
 				ResumeFlag:   "--resume",

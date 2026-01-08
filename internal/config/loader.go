@@ -674,6 +674,19 @@ func RigSettingsPath(rigPath string) string {
 	return filepath.Join(rigPath, "settings", "config.json")
 }
 
+// ResolvedAgent contains the selected agent, its runtime configuration,
+// and the associated preset metadata.
+type ResolvedAgent struct {
+	// Name is the agent name (preset or custom) used for this resolution.
+	Name string
+
+	// Runtime is the resolved runtime configuration for the agent.
+	Runtime *RuntimeConfig
+
+	// Preset contains metadata for the agent (nil for custom-only entries).
+	Preset *AgentPresetInfo
+}
+
 // LoadOrCreateTownSettings loads town settings or creates defaults if missing.
 func LoadOrCreateTownSettings(path string) (*TownSettings, error) {
 	data, err := os.ReadFile(path) //nolint:gosec // G304: path is constructed internally
@@ -730,17 +743,24 @@ func SaveTownSettings(path string, settings *TownSettings) error {
 // townRoot is the path to the town directory (e.g., ~/gt).
 // rigPath is the path to the rig directory (e.g., ~/gt/gastown).
 func ResolveAgentConfig(townRoot, rigPath string) *RuntimeConfig {
+	resolved := ResolveAgent(townRoot, rigPath)
+	if resolved == nil || resolved.Runtime == nil {
+		return DefaultRuntimeConfig()
+	}
+	return resolved.Runtime
+}
+
+// ResolveAgent returns the resolved agent configuration and preset metadata.
+// This is the full-fidelity version of ResolveAgentConfig and should be used
+// when callers need agent identity or capabilities in addition to runtime args.
+func ResolveAgent(townRoot, rigPath string) *ResolvedAgent {
 	// Load rig settings
 	rigSettings, err := LoadRigSettings(RigSettingsPath(rigPath))
 	if err != nil {
 		rigSettings = nil
 	}
 
-	// Backwards compatibility: if Runtime is set directly, use it
-	if rigSettings != nil && rigSettings.Runtime != nil {
-		rc := rigSettings.Runtime
-		return fillRuntimeDefaults(rc)
-	}
+	var runtimeConfig *RuntimeConfig
 
 	// Load town settings for agent lookup
 	townSettings, err := LoadOrCreateTownSettings(TownSettingsPath(townRoot))
@@ -750,6 +770,11 @@ func ResolveAgentConfig(townRoot, rigPath string) *RuntimeConfig {
 
 	// Load custom agent registry if it exists
 	_ = LoadAgentRegistry(DefaultAgentRegistryPath(townRoot))
+
+	// Backwards compatibility: if Runtime is set directly, use it
+	if rigSettings != nil && rigSettings.Runtime != nil {
+		runtimeConfig = fillRuntimeDefaults(rigSettings.Runtime)
+	}
 
 	// Determine which agent name to use
 	agentName := ""
@@ -761,8 +786,17 @@ func ResolveAgentConfig(townRoot, rigPath string) *RuntimeConfig {
 		agentName = "claude" // ultimate fallback
 	}
 
-	// Look up the agent configuration
-	return lookupAgentConfig(agentName, townSettings)
+	if runtimeConfig == nil {
+		runtimeConfig = lookupAgentConfig(agentName, townSettings)
+	}
+
+	preset := GetAgentPresetByName(agentName)
+
+	return &ResolvedAgent{
+		Name:    agentName,
+		Runtime: runtimeConfig,
+		Preset:  preset,
+	}
 }
 
 // lookupAgentConfig looks up an agent by name.
