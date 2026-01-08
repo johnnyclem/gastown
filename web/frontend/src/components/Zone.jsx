@@ -1,9 +1,17 @@
+import { useState } from "react";
+
 export default function Zone({ label, position, zIndex, sprite, fallbackEmoji }) {
+  const [imgError, setImgError] = useState(false);
+
   return (
     <div className="zone" style={{ ...position, zIndex }}>
       <div className="zone-sprite">
-        {sprite ? (
-          <img src={sprite} alt={label} />
+        {sprite && !imgError ? (
+          <img 
+            src={sprite} 
+            alt={label} 
+            onError={() => setImgError(true)}
+          />
         ) : (
           <div className="zone-fallback" aria-label={label}>
             <span>{fallbackEmoji}</span>

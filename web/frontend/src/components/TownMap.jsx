@@ -83,12 +83,33 @@ function hashString(value) {
 
 export default function TownMap() {
   const [snapshot, setSnapshot] = useState({ agents: [] });
+  const [isDemoMode, setIsDemoMode] = useState(true);
   const layout = layoutData.layout;
+
+  useEffect(() => {
+    console.log("Assets Loaded:", { cityHallImg, houseImg });
+  }, []);
+
+  const mockSnapshot = {
+    agents: [
+      { name: "Mayor Alice", role: "mayor", status: "WORKING" }, // At City Hall (default fallback)
+      { name: "Engineer Bob", role: "engineer", status: "IDLE" }, // At House
+      { name: "Engineer Charlie", role: "engineer", status: "WORKING" }, // At Office
+      { name: "Engineer Dave", role: "engineer", status: "MERGING" }, // In Queue
+      { name: "Polecat P1", role: "polecat", status: "ROAMING" }, // Roaming
+      { name: "Polecat P2", role: "polecat", status: "ROAMING" }
+    ]
+  };
 
   useEffect(() => {
     let isMounted = true;
 
     const fetchSnapshot = async () => {
+      if (isDemoMode) {
+        if (isMounted) setSnapshot(mockSnapshot);
+        return;
+      }
+
       try {
         const response = await fetch("/api/town/snapshot");
         if (!response.ok) {
@@ -110,7 +131,7 @@ export default function TownMap() {
       isMounted = false;
       clearInterval(timer);
     };
-  }, []);
+  }, [isDemoMode]);
 
   const zones = useMemo(() => {
     const entries = [];
@@ -164,6 +185,25 @@ export default function TownMap() {
 
   return (
     <div className="town-map">
+      <button
+        onClick={() => setIsDemoMode(!isDemoMode)}
+        style={{
+          position: "absolute",
+          top: "10px",
+          right: "10px",
+          zIndex: 1000,
+          padding: "8px 16px",
+          background: isDemoMode ? "#2563eb" : "#e5e7eb",
+          color: isDemoMode ? "white" : "black",
+          border: "none",
+          borderRadius: "8px",
+          cursor: "pointer",
+          fontWeight: "bold",
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+        }}
+      >
+        {isDemoMode ? "Disable Demo" : "Enable Demo"}
+      </button>
       <div className="grid" style={gridStyle}>
         {zones.map((zone) => {
           const asset = zoneSprites[zone.key] ?? {};
