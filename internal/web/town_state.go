@@ -1,7 +1,6 @@
 package web
 
 import (
-	"sort"
 	"strings"
 )
 
@@ -97,120 +96,6 @@ func AnimationStateForJobStatus(status JobStatus) AnimationState {
 	}
 }
 
-// TownStateFromConvoyData maps convoy and polecat data into a TownState snapshot.
-func TownStateFromConvoyData(convoys []ConvoyRow, polecats []PolecatRow) TownState {
-	agents := make(map[string]AgentState)
-	for _, polecat := range polecats {
-		role := roleForAgentName(polecat.Name)
-		agents[polecat.Name] = AgentState{
-			Name:   polecat.Name,
-			Role:   role,
-			Status: AgentStatusIdle,
-		}
-	}
-
-	jobs := make([]JobState, 0)
-	for _, convoy := range convoys {
-		for _, issue := range convoy.TrackedIssues {
-			jobStatus := JobStatusFromIssueStatus(issue.Status)
-			jobs = append(jobs, JobState{
-				ID:     issue.ID,
-				Title:  issue.Title,
-				Status: jobStatus,
-			})
-
-			if issue.Assignee == "" {
-				continue
-			}
-
-			current := agents[issue.Assignee]
-			if current.Name == "" {
-				current = AgentState{
-					Name: issue.Assignee,
-					Role: "polecat",
-				}
-			}
-			current.Status = mergeAgentStatus(current.Status, agentStatusForJobStatus(jobStatus))
-			agents[issue.Assignee] = current
-		}
-	}
-
-	agentList := make([]AgentState, 0, len(agents))
-	for _, agent := range agents {
-		agentList = append(agentList, agent)
-	}
-	sort.Slice(agentList, func(i, j int) bool {
-		return agentList[i].Name < agentList[j].Name
-	})
-
-	sort.Slice(jobs, func(i, j int) bool {
-		if jobs[i].ID == jobs[j].ID {
-			return jobs[i].Title < jobs[j].Title
-		}
-		return jobs[i].ID < jobs[j].ID
-	})
-
-	return TownState{
-		Agents: agentList,
-		Jobs:   jobs,
-	}
-}
-
-func agentStatusForJobStatus(status JobStatus) AgentStatus {
-	switch status {
-	case JobStatusReviewing:
-		return AgentStatusReviewing
-	case JobStatusMerging:
-		return AgentStatusMerging
-	case JobStatusInProgress:
-		return AgentStatusWorking
-	case JobStatusPending:
-		return AgentStatusIdle
-	default:
-		return AgentStatusUnknown
-	}
-}
-
-func mergeAgentStatus(current, candidate AgentStatus) AgentStatus {
-	if current == "" || current == AgentStatusUnknown {
-		return candidate
-	}
-	if candidate == AgentStatusUnknown {
-		return current
-	}
-	if agentStatusPriority(candidate) > agentStatusPriority(current) {
-		return candidate
-	}
-	return current
-}
-
-func agentStatusPriority(status AgentStatus) int {
-	switch status {
-	case AgentStatusMerging:
-		return 4
-	case AgentStatusReviewing:
-		return 3
-	case AgentStatusWorking:
-		return 2
-	case AgentStatusIdle:
-		return 1
-	default:
-		return 0
-	}
-}
-
-func roleForAgentName(name string) string {
-	switch strings.ToLower(name) {
-	case "mayor":
-		return "mayor"
-	case "deacon":
-		return "deacon"
-	case "witness":
-		return "witness"
-	case "refinery":
-		return "refinery"
-	default:
-		return "polecat"
 // TownStateFromConvoyData converts convoy dashboard data into TownState for the frontend.
 func TownStateFromConvoyData(data ConvoyData) TownState {
 	jobs := make(map[string]JobState)

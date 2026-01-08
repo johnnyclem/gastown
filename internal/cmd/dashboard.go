@@ -61,8 +61,13 @@ func runDashboard(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("creating convoy handler: %w", err)
 	}
 
-	snapshotHandler := web.NewTownSnapshotHandler(threadSafeFetcher)
-	frontendHandler, err := web.NewTownFrontendHandler()
+        // 1. Create the engine using the fetcher
+        townEngine := web.NewTownStateEngine(threadSafeFetcher)
+
+        // 2. Pass the engine to the handler
+        snapshotHandler := web.NewTownSnapshotHandler(townEngine)
+	
+        frontendHandler, err := web.NewTownFrontendHandler()
 	if err != nil {
 		return fmt.Errorf("creating town frontend handler: %w", err)
 	}
