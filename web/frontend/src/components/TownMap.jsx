@@ -265,53 +265,6 @@ export default function TownMap() {
 
   return (
     <div className="town-map">
-      <div className="grid" style={gridStyle}>
-        {zones.map((zone) => {
-          const asset = zoneSprites[zone.key] ?? {};
-          const position = toIso(zone.x, zone.y, origin);
-          const zIndex = (zone.x + zone.y) * 10;
-          return (
-            <Zone
-              key={zone.id}
-              label={zone.label}
-              position={position}
-              zIndex={zIndex}
-              imageSrc={asset.sprite}
-              fallbackEmoji={asset.emoji}
-            />
-          );
-        })}
-        {snapshot.agents.map((agent) => {
-          const zoneKey = statusToZone[agent.status] ?? "city_hall";
-          const zone = layout.zones[zoneKey];
-          const position = Array.isArray(zone)
-            ? pickResidentialSpot(agent.name, residential)
-            : zone;
-          const coords = position ?? { x: 0, y: 0 };
-          const mergeIndex = mergeQueueIndices.get(agent.name);
-          const queueOffset = mergeIndex ? mergeIndex : 0;
-          const adjustedCoords =
-            agent.status === "MERGING"
-              ? {
-                  x: coords.x + queueOffset,
-                  y: coords.y + queueOffset
-                }
-              : coords;
-          const isoPosition = toIso(adjustedCoords.x, adjustedCoords.y, origin);
-          const zIndex = (adjustedCoords.x + adjustedCoords.y) * 10;
-
-          return (
-            <Character
-              key={agent.name}
-              name={agent.name}
-              role={agent.role}
-              status={agent.status}
-              title={`${agent.name} (${agent.status})`}
-              position={isoPosition}
-              zIndex={zIndex}
-            />
-          );
-        })}
       <button
         onClick={() => setIsDemoMode(!isDemoMode)}
         style={{
