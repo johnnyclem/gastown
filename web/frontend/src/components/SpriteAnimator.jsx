@@ -9,6 +9,7 @@ export default function SpriteAnimator({
   fps = 8
 }) {
   const [currentFrame, setCurrentFrame] = useState(0);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     if (!animate) {
@@ -23,30 +24,33 @@ export default function SpriteAnimator({
     return () => clearInterval(interval);
   }, [animate, sheetCols, fps]);
 
-  // CSS Math
-  const bgSizeX = sheetCols * 100;
-  const bgSizeY = sheetRows * 100;
-
-  // Avoid division by zero if sheet has 1 col/row
-  const bgPosX = sheetCols > 1 ? (currentFrame / (sheetCols - 1)) * 100 : 0;
-  const bgPosY = sheetRows > 1 ? (row / (sheetRows - 1)) * 100 : 0;
+  const frameX = sheetCols > 1 ? currentFrame * (100 / sheetCols) : 0;
+  const frameY = sheetRows > 1 ? row * (100 / sheetRows) : 0;
 
   return (
     <div
       style={{
         width: "100%",
         height: "100%",
-        overflow: "hidden"
+        overflow: "hidden",
+        position: "relative",
+        backgroundColor: hasError ? "red" : "transparent"
       }}
     >
-      <div
+      <img
+        src={src}
+        alt=""
+        onLoad={() => setHasError(false)}
+        onError={() => setHasError(true)}
         style={{
-          width: "100%",
-          height: "100%",
-          backgroundImage: `url(${src})`,
-          backgroundRepeat: "no-repeat",
-          backgroundSize: `${bgSizeX}% ${bgSizeY}%`,
-          backgroundPosition: `${bgPosX}% ${bgPosY}%`,
+          display: hasError ? "none" : "block",
+          width: `${sheetCols * 100}%`,
+          height: `${sheetRows * 100}%`,
+          objectFit: "contain",
+          position: "absolute",
+          left: 0,
+          top: 0,
+          transform: `translate(-${frameX}%, -${frameY}%)`,
           mixBlendMode: "multiply", // Hides the white background
           filter: "contrast(1.1)" // Pop the colors slightly
         }}

@@ -2,24 +2,21 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import layoutData from "../config/town_layout.json";
 import Character from "./Character.jsx";
 import Zone from "./Zone.jsx";
-import cityHallSprite from "../assets/building_city_hall.png";
-import houseSprite from "../assets/building_house_small.png";
-import officeSprite from "../assets/building_office_large.png";
-import reviewStationSprite from "../assets/building_review_station.png";
-import mergeDepotSprite from "../assets/building_depot.png";
 import Minimap from "./Minimap.jsx";
 
-// Building Assets
-import cityHallImg from "../assets/building_city_hall.png";
-import houseImg from "../assets/building_house_small.png";
-import officeImg from "../assets/building_office_large.png";
-import reviewStationImg from "../assets/building_review_station.png";
-import depotImg from "../assets/building_depot.png";
-
-// Character Assets
-import charMayor from "../assets/char_mayor.png";
-import charEngineer from "../assets/char_engineer.png";
-import charPolecat from "../assets/char_polecat.png";
+const ASSET_BASE = "/assets";
+const buildingSprites = {
+  cityHall: `${ASSET_BASE}/building_city_hall.png`,
+  house: `${ASSET_BASE}/building_house_small.png`,
+  office: `${ASSET_BASE}/building_office_large.png`,
+  reviewStation: `${ASSET_BASE}/building_review_station.png`,
+  depot: `${ASSET_BASE}/building_depot.png`
+};
+const characterSprites = {
+  mayor: `${ASSET_BASE}/char_mayor.png`,
+  engineer: `${ASSET_BASE}/char_engineer.png`,
+  polecat: `${ASSET_BASE}/char_polecat.png`
+};
 
 const TILE_WIDTH = 64;
 const TILE_HEIGHT = 32;
@@ -33,41 +30,41 @@ const statusToZone = {
 
 const zoneSprites = {
   city_hall: {
-    sprite: cityHallSprite,
-    emoji: "🏛️"
+    sprite: buildingSprites.cityHall,
+    emoji: "🏛️",
     cols: 4,
     rows: 4
   },
   approval_office: {
-    sprite: reviewStationImg,
+    sprite: buildingSprites.reviewStation,
     emoji: "📋",
     cols: 4,
     rows: 4
   },
   merge_depot: {
-    sprite: mergeDepotSprite,
-    emoji: "🚌"
+    sprite: buildingSprites.depot,
+    emoji: "🚌",
     cols: 4,
     rows: 4
   },
   residential_district: {
-    sprite: houseImg,
+    sprite: buildingSprites.house,
     emoji: "🏡",
     cols: 4,
     rows: 4
   },
   commercial_district: {
-    sprite: officeSprite,
-    emoji: "🏢"
+    sprite: buildingSprites.office,
+    emoji: "🏢",
     cols: 4,
     rows: 4
   }
 };
 
 const roleSprites = {
-  mayor: charMayor,
-  engineer: charEngineer,
-  polecat: charPolecat
+  mayor: characterSprites.mayor,
+  engineer: characterSprites.engineer,
+  polecat: characterSprites.polecat
 };
 
 const characterConfig = {
@@ -115,10 +112,6 @@ export default function TownMap() {
   const [isDragging, setIsDragging] = useState(false);
   const lastMousePos = useRef({ x: 0, y: 0 });
   const viewportRef = useRef(null);
-
-  useEffect(() => {
-    console.log("Assets Loaded:", { cityHallImg, houseImg });
-  }, []);
 
   const mockSnapshot = {
     agents: [
