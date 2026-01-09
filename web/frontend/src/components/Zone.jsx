@@ -1,16 +1,10 @@
-import { useState } from "react";
 import SpriteAnimator from "./SpriteAnimator.jsx";
 
 export default function Zone({ label, position, zIndex, sprite, cols, rows, fallbackEmoji }) {
-  const [imgError, setImgError] = useState(false);
-
   return (
     <div className="zone" style={{ ...position, zIndex }}>
-      <div 
-        className="zone-sprite" 
-        style={{ width: '128px', height: '128px' }}
-      >
-        {sprite && !imgError ? (
+      <div className="zone-sprite">
+        {sprite ? (
           <SpriteAnimator 
             src={sprite} 
             sheetCols={cols}
