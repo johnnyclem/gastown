@@ -1,29 +1,37 @@
 import SpriteAnimator from "./SpriteAnimator.jsx";
 
-export default function Character({ name, role, status, sprite, cols, rows, title, position, zIndex }) {
+const SPRITE_CONFIG = {
+  sheetCols: 3,
+  sheetRows: 4,
+  frameWidth: 32,
+  frameHeight: 48,
+  fps: 8,
+  scale: 1.5
+};
+
+export default function Character({
+  name,
+  role,
+  status,
+  sprite,
+  title,
+  position,
+  zIndex
+}) {
   const isWorking = status === "WORKING" || status === "MERGING";
-  
-  // Logic: 
-  // Working -> Row 2 (Right/Side view usually action)
-  // Idle/Default -> Row 0 (Down/Front view)
   const animationRow = isWorking ? 2 : 0;
 
   return (
-    <div
-      className="character"
-      style={{ ...position, zIndex }}
-      title={title}
-    >
-      <div 
-        className="character-sprite-container"
-        style={{ width: '48px', height: '48px' }}
-      >
+    <div className="character" style={{ ...position, zIndex }} title={title}>
+      <div className="character-sprite-container">
         {sprite ? (
-          <SpriteAnimator 
+          <SpriteAnimator
             src={sprite}
-            sheetCols={cols}
-            sheetRows={rows}
-            animate={true}
+            sheetCols={SPRITE_CONFIG.sheetCols}
+            sheetRows={SPRITE_CONFIG.sheetRows}
+            frameWidth={SPRITE_CONFIG.frameWidth}
+            frameHeight={SPRITE_CONFIG.frameHeight}
+            animate
             row={animationRow}
             fps={8}
           />

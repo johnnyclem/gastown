@@ -113,6 +113,7 @@ body {
   align-items: center;
 
   transform: translate(-50%, -100%);
+  transform-origin: bottom center;
 
   text-align: center;
 
@@ -131,7 +132,15 @@ body {
   justify-content: center;
 
   align-items: flex-end;
+  width: 64px;
+  height: 64px;
 
+}
+
+.zone-sprite > div {
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden;
 }
 
 
@@ -144,7 +153,7 @@ body {
 
 
 
-  width: auto;
+  width: 100%;
 
 
 
@@ -152,7 +161,8 @@ body {
 
 
 
-  max-width: 128px;
+  display: block;
+  mix-blend-mode: multiply;
 
 
 
@@ -281,6 +291,7 @@ body {
 
 
   transform: translate(-50%, -100%);
+  transform-origin: bottom center;
 
 
 
@@ -333,6 +344,8 @@ body {
 
 
   align-items: flex-end;
+  width: 64px;
+  height: 64px;
 
 
 
@@ -340,6 +353,19 @@ body {
 
 
 
+}
+
+.character-sprite-container > div {
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden;
+}
+
+.character-sprite-container img {
+  width: 100%;
+  height: auto;
+  display: block;
+  mix-blend-mode: multiply;
 }
 
 
@@ -387,19 +413,11 @@ body {
 
 
 .character-avatar {
-
-  /* Legacy fallback style */
-
-  width: 28px;
-
-  height: 28px;
-
-  border-radius: 999px;
-
-  background: #1d4ed8;
-
-  color: #fff;
-
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1f2937;
   display: grid;
 
   place-items: center;

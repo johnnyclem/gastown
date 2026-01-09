@@ -2,6 +2,11 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import layoutData from "../config/town_layout.json";
 import Character from "./Character.jsx";
 import Zone from "./Zone.jsx";
+import cityHallSprite from "../assets/building_city_hall.png";
+import houseSprite from "../assets/building_house_small.png";
+import officeSprite from "../assets/building_office_large.png";
+import reviewStationSprite from "../assets/building_review_station.png";
+import mergeDepotSprite from "../assets/building_depot.png";
 import Minimap from "./Minimap.jsx";
 
 // Building Assets
@@ -28,34 +33,34 @@ const statusToZone = {
 
 const zoneSprites = {
   city_hall: {
-    sprite: cityHallImg,
-    emoji: "🏛️",
-    cols: 3,
-    rows: 3
+    sprite: cityHallSprite,
+    emoji: "🏛️"
+    cols: 4,
+    rows: 4
   },
   approval_office: {
     sprite: reviewStationImg,
     emoji: "📋",
-    cols: 3,
-    rows: 3
+    cols: 4,
+    rows: 4
   },
   merge_depot: {
-    sprite: depotImg,
-    emoji: "🚌",
-    cols: 2,
-    rows: 3
+    sprite: mergeDepotSprite,
+    emoji: "🚌"
+    cols: 4,
+    rows: 4
   },
   residential_district: {
     sprite: houseImg,
     emoji: "🏡",
-    cols: 3,
-    rows: 3
+    cols: 4,
+    rows: 4
   },
   commercial_district: {
-    sprite: officeImg,
-    emoji: "🏢",
-    cols: 3,
-    rows: 3
+    sprite: officeSprite,
+    emoji: "🏢"
+    cols: 4,
+    rows: 4
   }
 };
 
@@ -66,8 +71,8 @@ const roleSprites = {
 };
 
 const characterConfig = {
-  cols: 3,
-  rows: 4
+  cols: 2,
+  rows: 2
 };
 
 function toIso(gridX, gridY, origin) {
