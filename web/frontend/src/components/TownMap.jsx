@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import layoutData from "../config/town_layout.json";
 import Character from "./Character.jsx";
+import Courier from "./Courier.jsx";
+import TrafficLayer from "./TrafficLayer.jsx";
 import Zone from "./Zone.jsx";
 import Minimap from "./Minimap.jsx";
 
@@ -193,9 +195,12 @@ export default function TownMap() {
     [layout.grid_size]
   );
 
+  const gridWidth = layout.grid_size * TILE_WIDTH;
+  const gridHeight = layout.grid_size * TILE_HEIGHT;
+
   const gridStyle = {
-    width: `${layout.grid_size * TILE_WIDTH}px`,
-    height: `${layout.grid_size * TILE_HEIGHT}px`
+    width: `${gridWidth}px`,
+    height: `${gridHeight}px`
   };
 
   const residential = layout.zones.residential_district ?? [];
@@ -214,6 +219,7 @@ export default function TownMap() {
       const position = Array.isArray(zone)
         ? pickResidentialSpot(agent.name, residential)
         : zone;
+      const homeCoords = pickResidentialSpot(agent.name, residential);
       const coords = position ?? { x: 0, y: 0 };
       const mergeIndex = mergeQueueIndices.get(agent.name);
       const queueOffset = mergeIndex ? mergeIndex : 0;
@@ -226,6 +232,7 @@ export default function TownMap() {
           : coords;
       
       const isoPosition = toIso(adjustedCoords.x, adjustedCoords.y, origin);
+      const homeIsoPosition = toIso(homeCoords.x, homeCoords.y, origin);
       const zIndex = (adjustedCoords.x + adjustedCoords.y) * 10 + 1;
       const sprite = roleSprites[agent.role] ?? roleSprites["engineer"];
 
@@ -233,12 +240,45 @@ export default function TownMap() {
         ...agent,
         gridX: adjustedCoords.x,
         gridY: adjustedCoords.y,
+        homeCoords,
+        homeIsoPosition,
         isoPosition,
         zIndex,
         sprite
       };
     });
   }, [snapshot.agents, layout, residential, mergeQueueIndices, origin]);
+
+  const mayorOfficeIso = useMemo(() => {
+    const mayorOffice = layout.zones.city_hall ?? { x: 0, y: 0 };
+    return toIso(mayorOffice.x, mayorOffice.y, origin);
+  }, [layout.zones, origin]);
+
+  const approvalOfficeIso = useMemo(() => {
+    const office = layout.zones.approval_office ?? { x: 0, y: 0 };
+    return toIso(office.x, office.y, origin);
+  }, [layout.zones, origin]);
+
+  const trafficLinks = useMemo(() => {
+    return agentPositions
+      .filter((agent) => agent.status === "WORKING" && agent.role !== "mayor")
+      .map((agent) => ({
+        id: agent.name,
+        start: { x: mayorOfficeIso.x, y: mayorOfficeIso.y },
+        end: { x: agent.homeIsoPosition.x, y: agent.homeIsoPosition.y }
+      }));
+  }, [agentPositions, mayorOfficeIso]);
+
+  const couriers = useMemo(() => {
+    return agentPositions
+      .filter((agent) => agent.status === "MERGING")
+      .map((agent) => ({
+        id: agent.name,
+        start: { x: agent.homeIsoPosition.x, y: agent.homeIsoPosition.y },
+        end: { x: approvalOfficeIso.x, y: approvalOfficeIso.y },
+        zIndex: 2500 + agent.zIndex
+      }));
+  }, [agentPositions, approvalOfficeIso]);
 
 
   // Viewport Handlers
@@ -334,6 +374,19 @@ export default function TownMap() {
                 />
               );
             })}
+            <TrafficLayer
+              width={gridWidth}
+              height={gridHeight}
+              links={trafficLinks}
+            />
+            {couriers.map((courier) => (
+              <Courier
+                key={courier.id}
+                start={courier.start}
+                end={courier.end}
+                zIndex={courier.zIndex}
+              />
+            ))}
             {agentPositions.map((agent) => (
               <Character
                 key={agent.name}
@@ -345,7 +398,7 @@ export default function TownMap() {
                 rows={characterConfig.rows}
                 title={`${agent.name} (${agent.role})`}
                 position={agent.isoPosition}
-                zIndex={agent.zIndex}
+                zIndex={agent.zIndex + 3000}
               />
             ))}
           </div>
