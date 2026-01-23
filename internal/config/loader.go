@@ -253,11 +253,13 @@ func NewRigConfig(name, gitURL string) *RigConfig {
 
 // NewRigSettings creates a new RigSettings with defaults.
 func NewRigSettings() *RigSettings {
+	autoDetect := true
 	return &RigSettings{
 		Type:       "rig-settings",
 		Version:    CurrentRigSettingsVersion,
 		MergeQueue: DefaultMergeQueueConfig(),
 		Namepool:   DefaultNamepoolConfig(),
+		IOSDevMode: &IOSDevModeConfig{AutoDetect: &autoDetect},
 	}
 }
 

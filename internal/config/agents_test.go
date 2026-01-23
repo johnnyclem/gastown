@@ -34,8 +34,8 @@ func TestGetAgentPresetByName(t *testing.T) {
 		{"claude", AgentClaude, false},
 		{"gemini", AgentGemini, false},
 		{"codex", AgentCodex, false},
-		{"aider", "", true},    // Not built-in, can be added via config
-		{"opencode", "", true}, // Not built-in, can be added via config
+		{"aider", "", true},   // Not built-in, can be added via config
+		{"gastown", "", true}, // Not built-in, can be added via config
 		{"unknown", "", true},
 	}
 
@@ -84,8 +84,8 @@ func TestIsKnownPreset(t *testing.T) {
 		{"claude", true},
 		{"gemini", true},
 		{"codex", true},
-		{"aider", false},    // Not built-in, can be added via config
-		{"opencode", false}, // Not built-in, can be added via config
+		{"aider", false},   // Not built-in, can be added via config
+		{"gastown", false}, // Not built-in, can be added via config
 		{"unknown", false},
 		{"chatgpt", false},
 	}

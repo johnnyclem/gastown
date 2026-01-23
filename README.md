@@ -251,6 +251,44 @@ gt config agent set claude-glm "claude-glm --model glm-4"
 gt config default-agent claude-glm
 ```
 
+## iOS Dev mode (Gas Town)
+
+Gas Town includes an iOS Dev mode that auto-detects iOS repositories and wires up
+common workflows like dependency installation, `xcodebuild` builds/tests, simulator
+control, and UI/UX impact checks.
+
+### Quick start
+
+```bash
+# Detect iOS indicators in the current repo
+gt ios detect
+
+# Enable/disable iOS Dev mode for the current rig
+gt ios mode --enable
+gt ios mode --disable
+
+# Build or test a scheme
+gt ios build --workspace App.xcworkspace --scheme App --destination "platform=iOS Simulator,name=iPhone 14"
+gt ios test --workspace App.xcworkspace --scheme App --destination "platform=iOS Simulator,name=iPhone 14"
+
+# Capture screenshots across multiple simulators
+gt ios screenshots --bundle-id com.example.app --app-path build/App.app --label before
+```
+
+### UI/UX impact checks
+
+```bash
+# Detect UI impact using git diff
+gt ios ui-impact --git
+
+# Or supply explicit files
+gt ios ui-impact --file Sources/HomeView.swift --file Assets/Colors.xcassets
+```
+
+Gas Town prefers `idb` (Facebook's iOS Development Bridge) when available and falls
+back to `xcrun simctl` if it is not installed. If Xcode tooling is missing, the
+commands will report the failure and suggest installing Xcode CLI tools.
+
 Most other work happens through agents - just ask them.
 
 ### For Agents
