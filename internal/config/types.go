@@ -113,10 +113,10 @@ const CurrentRigSettingsVersion = 1
 // RigConfig represents per-rig identity (rig/config.json).
 // This contains only identity - behavioral config is in settings/config.json.
 type RigConfig struct {
-	Type      string       `json:"type"`       // "rig"
-	Version   int          `json:"version"`    // schema version
-	Name      string       `json:"name"`       // rig name
-	GitURL    string       `json:"git_url"`    // git repository URL
+	Type      string       `json:"type"`    // "rig"
+	Version   int          `json:"version"` // schema version
+	Name      string       `json:"name"`    // rig name
+	GitURL    string       `json:"git_url"` // git repository URL
 	LocalRepo string       `json:"local_repo,omitempty"`
 	CreatedAt time.Time    `json:"created_at"` // when the rig was created
 	Beads     *BeadsConfig `json:"beads,omitempty"`
@@ -124,13 +124,14 @@ type RigConfig struct {
 
 // RigSettings represents per-rig behavioral configuration (settings/config.json).
 type RigSettings struct {
-	Type       string            `json:"type"`                  // "rig-settings"
-	Version    int               `json:"version"`               // schema version
-	MergeQueue *MergeQueueConfig `json:"merge_queue,omitempty"` // merge queue settings
-	Theme      *ThemeConfig      `json:"theme,omitempty"`       // tmux theme settings
-	Namepool   *NamepoolConfig   `json:"namepool,omitempty"`    // polecat name pool settings
-	Crew       *CrewConfig       `json:"crew,omitempty"`        // crew startup settings
-	Runtime    *RuntimeConfig    `json:"runtime,omitempty"`     // LLM runtime settings (deprecated: use Agent)
+	Type       string            `json:"type"`                   // "rig-settings"
+	Version    int               `json:"version"`                // schema version
+	MergeQueue *MergeQueueConfig `json:"merge_queue,omitempty"`  // merge queue settings
+	Theme      *ThemeConfig      `json:"theme,omitempty"`        // tmux theme settings
+	Namepool   *NamepoolConfig   `json:"namepool,omitempty"`     // polecat name pool settings
+	Crew       *CrewConfig       `json:"crew,omitempty"`         // crew startup settings
+	Runtime    *RuntimeConfig    `json:"runtime,omitempty"`      // LLM runtime settings (deprecated: use Agent)
+	IOSDevMode *IOSDevModeConfig `json:"ios_dev_mode,omitempty"` // Gas Town iOS Dev mode settings
 
 	// Agent selects which agent preset to use for this rig.
 	// Can be a built-in preset ("claude", "gemini", "codex")
@@ -152,6 +153,13 @@ type CrewConfig struct {
 	//   "max, but not emma"      - start max, skip emma
 	// If empty, defaults to starting no crew automatically.
 	Startup string `json:"startup,omitempty"`
+}
+
+// IOSDevModeConfig configures Gas Town's iOS Dev mode behavior.
+type IOSDevModeConfig struct {
+	Enabled     *bool  `json:"enabled,omitempty"`
+	AutoDetect  *bool  `json:"auto_detect,omitempty"`
+	Screenshots string `json:"screenshots_dir,omitempty"`
 }
 
 // RuntimeConfig represents LLM runtime configuration for agent sessions.
@@ -264,8 +272,8 @@ type TownThemeConfig struct {
 // These are used when no explicit configuration is provided.
 func BuiltinRoleThemes() map[string]string {
 	return map[string]string{
-		"witness":  "rust",  // Red/rust - watchful, alert
-		"refinery": "plum",  // Purple - processing, refining
+		"witness":  "rust", // Red/rust - watchful, alert
+		"refinery": "plum", // Purple - processing, refining
 		// crew and polecat use rig theme by default (no override)
 	}
 }

@@ -16,8 +16,10 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/steveyegge/gastown/internal/beads"
 	"github.com/steveyegge/gastown/internal/checkpoint"
+	"github.com/steveyegge/gastown/internal/config"
 	"github.com/steveyegge/gastown/internal/constants"
 	"github.com/steveyegge/gastown/internal/events"
+	"github.com/steveyegge/gastown/internal/gastown/iosdev"
 	"github.com/steveyegge/gastown/internal/lock"
 	"github.com/steveyegge/gastown/internal/rig"
 	"github.com/steveyegge/gastown/internal/session"
@@ -27,6 +29,8 @@ import (
 )
 
 var primeHookMode bool
+var primeIOSDevEnable bool
+var primeIOSDevDisable bool
 
 // Role represents a detected agent role.
 type Role string
@@ -72,6 +76,8 @@ HOOK MODE (--hook):
 func init() {
 	primeCmd.Flags().BoolVar(&primeHookMode, "hook", false,
 		"Hook mode: read session ID from stdin JSON (for LLM runtime hooks)")
+	primeCmd.Flags().BoolVar(&primeIOSDevEnable, "ios-dev", false, "Force enable Gas Town iOS Dev mode")
+	primeCmd.Flags().BoolVar(&primeIOSDevDisable, "no-ios-dev", false, "Disable Gas Town iOS Dev mode")
 	rootCmd.AddCommand(primeCmd)
 }
 
@@ -83,6 +89,10 @@ func runPrime(cmd *cobra.Command, args []string) error {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("getting current directory: %w", err)
+	}
+
+	if primeIOSDevEnable && primeIOSDevDisable {
+		return fmt.Errorf("cannot use --ios-dev and --no-ios-dev together")
 	}
 
 	// Find town root
@@ -162,6 +172,9 @@ func runPrime(cmd *cobra.Command, args []string) error {
 	if err := outputPrimeContext(ctx); err != nil {
 		return err
 	}
+
+	// Output iOS Dev mode status for Gas Town when applicable.
+	outputIOSDevMode(ctx)
 
 	// Output handoff content if present
 	outputHandoffContent(ctx)
@@ -608,6 +621,81 @@ func outputStartupDirective(ctx RoleContext) {
 		fmt.Println("   - If mol attached → **RUN IT** (resume from current step)")
 		fmt.Println("   - If no mol → create patrol: `bd mol wisp mol-deacon-patrol`")
 	}
+}
+
+func outputIOSDevMode(ctx RoleContext) {
+	gitRoot, err := getGitRoot()
+	if err != nil || gitRoot == "" {
+		return
+	}
+
+	settings := iosdev.ModeSettings{AutoDetect: true}
+	if ctx.Rig != "" {
+		rigPath := filepath.Join(ctx.TownRoot, ctx.Rig)
+		rigSettings, err := config.LoadRigSettings(config.RigSettingsPath(rigPath))
+		if err == nil && rigSettings.IOSDevMode != nil {
+			if rigSettings.IOSDevMode.AutoDetect != nil {
+				settings.AutoDetect = *rigSettings.IOSDevMode.AutoDetect
+			}
+			if rigSettings.IOSDevMode.Enabled != nil {
+				settings.Override = rigSettings.IOSDevMode.Enabled
+			}
+		}
+	}
+
+	if envOverride, ok := parseBoolEnv(os.Getenv("GT_IOS_DEV_MODE")); ok {
+		settings.Override = &envOverride
+	}
+	if primeIOSDevEnable {
+		value := true
+		settings.Override = &value
+	}
+	if primeIOSDevDisable {
+		value := false
+		settings.Override = &value
+	}
+
+	decision, err := iosdev.ResolveMode(gitRoot, settings)
+	if err != nil {
+		return
+	}
+
+	if !decision.Enabled && decision.Source != "override" {
+		return
+	}
+
+	if err := os.Setenv("GT_IOS_DEV_MODE", fmt.Sprintf("%t", decision.Enabled)); err != nil {
+		// Ignore errors setting env for this process.
+	}
+
+	fmt.Println()
+	fmt.Println(style.Bold.Render("## 🍎 Gas Town iOS Dev Mode"))
+	fmt.Printf("Status: %s (%s)\n", statusLabel(decision.Enabled), decision.Reason)
+	if len(decision.Matches) > 0 {
+		fmt.Println("Indicators:")
+		for _, match := range decision.Matches {
+			fmt.Printf("  - %s (%s)\n", match.Path, match.Reason)
+		}
+	}
+	fmt.Println("Tools: gt ios detect|build|test|screenshots|ui-impact")
+}
+
+func parseBoolEnv(value string) (bool, bool) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "1", "true", "yes", "on", "enabled":
+		return true, true
+	case "0", "false", "no", "off", "disabled":
+		return false, true
+	default:
+		return false, false
+	}
+}
+
+func statusLabel(enabled bool) string {
+	if enabled {
+		return style.Bold.Render("enabled")
+	}
+	return style.Dim.Render("disabled")
 }
 
 // runMailCheckInject runs `gt mail check --inject` and outputs the result.
