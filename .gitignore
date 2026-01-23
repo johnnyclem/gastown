@@ -28,6 +28,7 @@ coverage.out
 config.toml
 !config.example.toml
 gt
+!internal/gt/
 
 # Runtime state
 state.json
