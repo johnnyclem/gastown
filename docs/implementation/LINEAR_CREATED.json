@@ -1,0 +1,226 @@
+[
+  {
+    "ticket_id": "GCC-E1-001",
+    "title": "[GCC-E1-001] Canonical Event Envelope and Schema Registry",
+    "action": "created",
+    "issue_id": "55cb8535-4706-4a1b-9eac-dcdee7e0ccf9",
+    "identifier": "CLE-5",
+    "url": "https://linear.app/clempot/issue/CLE-5/gcc-e1-001-canonical-event-envelope-and-schema-registry"
+  },
+  {
+    "ticket_id": "GCC-E1-002",
+    "title": "[GCC-E1-002] Append-Only Event Store and Immutable Audit Ledger",
+    "action": "created",
+    "issue_id": "29087ab1-e544-4760-bfb4-0db3b556c2cd",
+    "identifier": "CLE-6",
+    "url": "https://linear.app/clempot/issue/CLE-6/gcc-e1-002-append-only-event-store-and-immutable-audit-ledger"
+  },
+  {
+    "ticket_id": "GCC-E1-003",
+    "title": "[GCC-E1-003] Snapshot+Cursor Replay API with WS/SSE Contract",
+    "action": "created",
+    "issue_id": "fa149fdd-e240-4822-832c-2cabbd0201b6",
+    "identifier": "CLE-7",
+    "url": "https://linear.app/clempot/issue/CLE-7/gcc-e1-003-snapshotcursor-replay-api-with-wssse-contract"
+  },
+  {
+    "ticket_id": "GCC-E1-004",
+    "title": "[GCC-E1-004] Tenant Identity Model and RBAC Authorization Guards",
+    "action": "created",
+    "issue_id": "cefcfdf7-6506-4065-acdd-5a14c7541fba",
+    "identifier": "CLE-8",
+    "url": "https://linear.app/clempot/issue/CLE-8/gcc-e1-004-tenant-identity-model-and-rbac-authorization-guards"
+  },
+  {
+    "ticket_id": "GCC-E1-005",
+    "title": "[GCC-E1-005] Evidence Deep-Link Router and Resolver",
+    "action": "created",
+    "issue_id": "0cc2cb2d-1d37-4d08-9366-90281625ae78",
+    "identifier": "CLE-9",
+    "url": "https://linear.app/clempot/issue/CLE-9/gcc-e1-005-evidence-deep-link-router-and-resolver"
+  },
+  {
+    "ticket_id": "GCC-E1-006",
+    "title": "[GCC-E1-006] CI Lints for Normative Language and Metaphor Drift",
+    "action": "created",
+    "issue_id": "fa1510c0-da04-418a-89f7-64d2e40208f7",
+    "identifier": "CLE-10",
+    "url": "https://linear.app/clempot/issue/CLE-10/gcc-e1-006-ci-lints-for-normative-language-and-metaphor-drift"
+  },
+  {
+    "ticket_id": "GCC-E2-001",
+    "title": "[GCC-E2-001] Deterministic Projection Model for Town and Building Status",
+    "action": "created",
+    "issue_id": "4fdcb3c2-55d8-4fe6-99f8-33375c7a5f26",
+    "identifier": "CLE-11",
+    "url": "https://linear.app/clempot/issue/CLE-11/gcc-e2-001-deterministic-projection-model-for-town-and-building-status"
+  },
+  {
+    "ticket_id": "GCC-E2-002",
+    "title": "[GCC-E2-002] Town Map Canvas with LOD and Evidence Entry Points",
+    "action": "created",
+    "issue_id": "c4ce3e86-349d-48d9-a107-e481cf85716c",
+    "identifier": "CLE-12",
+    "url": "https://linear.app/clempot/issue/CLE-12/gcc-e2-002-town-map-canvas-with-lod-and-evidence-entry-points"
+  },
+  {
+    "ticket_id": "GCC-E2-003",
+    "title": "[GCC-E2-003] Search and Filter Grammar with Stable Ranking",
+    "action": "created",
+    "issue_id": "fe7a3048-938f-4b50-8c23-96b9182dfeff",
+    "identifier": "CLE-13",
+    "url": "https://linear.app/clempot/issue/CLE-13/gcc-e2-003-search-and-filter-grammar-with-stable-ranking"
+  },
+  {
+    "ticket_id": "GCC-E2-004",
+    "title": "[GCC-E2-004] Town Crier Alerts with Ack vs Snooze Semantics",
+    "action": "created",
+    "issue_id": "3b5b602f-3a60-4727-bd19-bcb9de0e213f",
+    "identifier": "CLE-14",
+    "url": "https://linear.app/clempot/issue/CLE-14/gcc-e2-004-town-crier-alerts-with-ack-vs-snooze-semantics"
+  },
+  {
+    "ticket_id": "GCC-E2-005",
+    "title": "[GCC-E2-005] Building Interior Room Lifecycle and Artifact Hotspots",
+    "action": "created",
+    "issue_id": "82da58cd-ce75-46e1-a22b-fa46e4781102",
+    "identifier": "CLE-15",
+    "url": "https://linear.app/clempot/issue/CLE-15/gcc-e2-005-building-interior-room-lifecycle-and-artifact-hotspots"
+  },
+  {
+    "ticket_id": "GCC-E3-001",
+    "title": "[GCC-E3-001] Deterministic Option Generator Service",
+    "action": "created",
+    "issue_id": "1fffaf52-e037-4152-b294-93055cfa981f",
+    "identifier": "CLE-16",
+    "url": "https://linear.app/clempot/issue/CLE-16/gcc-e3-001-deterministic-option-generator-service"
+  },
+  {
+    "ticket_id": "GCC-E3-002",
+    "title": "[GCC-E3-002] Agent Battle Terminal Shell and Keyboard Model",
+    "action": "created",
+    "issue_id": "9e3002a8-9bda-4d88-8865-daf016491f23",
+    "identifier": "CLE-17",
+    "url": "https://linear.app/clempot/issue/CLE-17/gcc-e3-002-agent-battle-terminal-shell-and-keyboard-model"
+  },
+  {
+    "ticket_id": "GCC-E3-003",
+    "title": "[GCC-E3-003] Proof River Streaming Cards with Correlation Links",
+    "action": "created",
+    "issue_id": "87392978-a748-44ad-a30e-520866aa80f7",
+    "identifier": "CLE-18",
+    "url": "https://linear.app/clempot/issue/CLE-18/gcc-e3-003-proof-river-streaming-cards-with-correlation-links"
+  },
+  {
+    "ticket_id": "GCC-E3-004",
+    "title": "[GCC-E3-004] Meter Derivation and Provenance Panels",
+    "action": "created",
+    "issue_id": "e1b56fa5-11f2-4861-a174-de71e22b7e4d",
+    "identifier": "CLE-19",
+    "url": "https://linear.app/clempot/issue/CLE-19/gcc-e3-004-meter-derivation-and-provenance-panels"
+  },
+  {
+    "ticket_id": "GCC-E3-005",
+    "title": "[GCC-E3-005] Mayor Dangerous Action Confirmation and Ledger Capture",
+    "action": "created",
+    "issue_id": "4ecfce56-08c3-442e-af92-5c3b2371cb82",
+    "identifier": "CLE-20",
+    "url": "https://linear.app/clempot/issue/CLE-20/gcc-e3-005-mayor-dangerous-action-confirmation-and-ledger-capture"
+  },
+  {
+    "ticket_id": "GCC-E4-001",
+    "title": "[GCC-E4-001] Provider Adapter Contract and Normalization Layer",
+    "action": "created",
+    "issue_id": "2ce1b5c7-f39e-499c-8a56-e21c476186f2",
+    "identifier": "CLE-21",
+    "url": "https://linear.app/clempot/issue/CLE-21/gcc-e4-001-provider-adapter-contract-and-normalization-layer"
+  },
+  {
+    "ticket_id": "GCC-E4-002",
+    "title": "[GCC-E4-002] Merge Lane State Machine and Deterministic Gate Evaluator",
+    "action": "created",
+    "issue_id": "e0948cd2-ec9d-4514-b9cf-62e7f5c969c7",
+    "identifier": "CLE-22",
+    "url": "https://linear.app/clempot/issue/CLE-22/gcc-e4-002-merge-lane-state-machine-and-deterministic-gate-evaluator"
+  },
+  {
+    "ticket_id": "GCC-E4-003",
+    "title": "[GCC-E4-003] Highway Merge Traffic UI with Lane Clustering",
+    "action": "created",
+    "issue_id": "3200f5a8-e716-49c3-b661-0893f9f06ff7",
+    "identifier": "CLE-23",
+    "url": "https://linear.app/clempot/issue/CLE-23/gcc-e4-003-highway-merge-traffic-ui-with-lane-clustering"
+  },
+  {
+    "ticket_id": "GCC-E4-004",
+    "title": "[GCC-E4-004] Conflict Encounter Resolution Command Flows",
+    "action": "created",
+    "issue_id": "14863716-e1b8-49f4-ad24-e8aa0979b438",
+    "identifier": "CLE-24",
+    "url": "https://linear.app/clempot/issue/CLE-24/gcc-e4-004-conflict-encounter-resolution-command-flows"
+  },
+  {
+    "ticket_id": "GCC-E4-005",
+    "title": "[GCC-E4-005] Rework Ticket Generation and Lane Block/Unblock Rules",
+    "action": "created",
+    "issue_id": "bedc49c7-a564-4f89-8362-5cf13f484b78",
+    "identifier": "CLE-25",
+    "url": "https://linear.app/clempot/issue/CLE-25/gcc-e4-005-rework-ticket-generation-and-lane-blockunblock-rules"
+  },
+  {
+    "ticket_id": "GCC-E4-006",
+    "title": "[GCC-E4-006] Gate Reconciliation Job and Incident Emission",
+    "action": "created",
+    "issue_id": "97dcf71b-a9d0-496d-a134-268555a201ae",
+    "identifier": "CLE-26",
+    "url": "https://linear.app/clempot/issue/CLE-26/gcc-e4-006-gate-reconciliation-job-and-incident-emission"
+  },
+  {
+    "ticket_id": "GCC-E5-001",
+    "title": "[GCC-E5-001] City Hall Global Queue with Deterministic Ordering",
+    "action": "created",
+    "issue_id": "d3687b32-1a63-44f8-8513-819c0ae9de42",
+    "identifier": "CLE-27",
+    "url": "https://linear.app/clempot/issue/CLE-27/gcc-e5-001-city-hall-global-queue-with-deterministic-ordering"
+  },
+  {
+    "ticket_id": "GCC-E5-002",
+    "title": "[GCC-E5-002] Policy Control Plane Versioning and Effective Times",
+    "action": "created",
+    "issue_id": "a10ed558-90eb-4708-ba8a-cb9a8d213f1b",
+    "identifier": "CLE-28",
+    "url": "https://linear.app/clempot/issue/CLE-28/gcc-e5-002-policy-control-plane-versioning-and-effective-times"
+  },
+  {
+    "ticket_id": "GCC-E5-003",
+    "title": "[GCC-E5-003] Incident Controls with Scope, Expiry, and Replayable History",
+    "action": "created",
+    "issue_id": "84da2211-c4d4-46e2-ae60-307c8f8e4030",
+    "identifier": "CLE-29",
+    "url": "https://linear.app/clempot/issue/CLE-29/gcc-e5-003-incident-controls-with-scope-expiry-and-replayable-history"
+  },
+  {
+    "ticket_id": "GCC-E5-004",
+    "title": "[GCC-E5-004] Coordination Detector with Evidence-Linked Remediation",
+    "action": "created",
+    "issue_id": "fccfc776-5ddb-494f-9059-e4cf68cf45aa",
+    "identifier": "CLE-30",
+    "url": "https://linear.app/clempot/issue/CLE-30/gcc-e5-004-coordination-detector-with-evidence-linked-remediation"
+  },
+  {
+    "ticket_id": "GCC-E5-005",
+    "title": "[GCC-E5-005] Offline Replay Mode and Reconnect Recovery",
+    "action": "created",
+    "issue_id": "3251f1bc-da66-4f88-8702-d896ed001ad5",
+    "identifier": "CLE-31",
+    "url": "https://linear.app/clempot/issue/CLE-31/gcc-e5-005-offline-replay-mode-and-reconnect-recovery"
+  },
+  {
+    "ticket_id": "GCC-E5-006",
+    "title": "[GCC-E5-006] Acceptance Harness and SLO/Audit/Replay Dashboards",
+    "action": "created",
+    "issue_id": "6231271a-e05d-456a-8f28-dc92fd1f39ee",
+    "identifier": "CLE-32",
+    "url": "https://linear.app/clempot/issue/CLE-32/gcc-e5-006-acceptance-harness-and-sloauditreplay-dashboards"
+  }
+]
