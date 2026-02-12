@@ -1,0 +1,343 @@
+// Gastown Command Center - Prisma Schema
+// Real-time AI Agent Orchestration Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== TENANT & IDENTITY ====================
+
+model Tenant {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  users       User[]
+  projects    Project[]
+  agents      Agent[]
+  policies    Policy[]
+  incidents   Incident[]
+  auditLedger AuditLedgerEntry[]
+  events      Event[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  tenantId  String
+  email     String   @unique
+  name      String?
+  role      String   @default("viewer") // viewer, operator, mayor/admin
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  auditLogs AuditLedgerEntry[]
+  
+  @@index([tenantId])
+}
+
+// ==================== CORE ENTITIES ====================
+
+model Project {
+  id                    String   @id @default(cuid())
+  tenantId              String
+  name                  String
+  description           String?
+  status                String   @default("idle") // idle, working, blocked, error, awaiting_approval
+  statusReason          String?
+  repoProvider          String?  // github, gitlab, bitbucket
+  repoId                String?
+  lastImportantEventAt  DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  tenant                Tenant       @relation(fields: [tenantId], references: [id])
+  worktrees             Worktree[]
+  beads                 Bead[]
+  agents                Agent[]
+  mergeLanes            MergeLane[]
+  incidents             Incident[]
+  
+  @@index([tenantId])
+  @@index([status])
+}
+
+model Agent {
+  id            String   @id @default(cuid())
+  tenantId      String
+  projectId     String
+  name          String
+  type          String   @default("worker") // worker, reviewer, orchestrator
+  status        String   @default("idle") // idle, working, blocked, error
+  statusReason  String?
+  lastActiveAt  DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  project       Project  @relation(fields: [projectId], references: [id])
+  beads         Bead[]
+  
+  @@index([tenantId])
+  @@index([projectId])
+}
+
+model Worktree {
+  id            String   @id @default(cuid())
+  tenantId      String
+  projectId     String
+  name          String
+  branchName    String
+  headSha       String?
+  baseSha       String?
+  status        String   @default("active") // active, archived
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  project       Project  @relation(fields: [projectId], references: [id])
+  commits       Commit[]
+  
+  @@index([tenantId])
+  @@index([projectId])
+}
+
+model Bead {
+  id                String   @id @default(cuid())
+  tenantId          String
+  projectId         String
+  agentId           String?
+  title             String
+  description       String?
+  status            String   @default("pending") // pending, in_progress, completed, blocked
+  statusReason      String?
+  priority          Int      @default(0)
+  requiredArtifacts String? // JSON array of artifact IDs
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  project           Project  @relation(fields: [projectId], references: [id])
+  agent             Agent?   @relation(fields: [agentId], references: [id])
+  artifacts         Artifact[]
+  
+  @@index([tenantId])
+  @@index([projectId])
+  @@index([agentId])
+}
+
+// ==================== GIT & MERGE ENTITIES ====================
+
+model Commit {
+  id            String   @id @default(cuid())
+  tenantId      String
+  worktreeId    String
+  sha           String   @unique
+  message       String
+  author        String?
+  authorEmail   String?
+  parentSha     String?
+  createdAt     DateTime @default(now())
+  
+  worktree      Worktree @relation(fields: [worktreeId], references: [id])
+  pushes        Push[]
+  
+  @@index([tenantId])
+  @@index([worktreeId])
+}
+
+model Push {
+  id            String   @id @default(cuid())
+  tenantId      String
+  projectId     String
+  commitId      String?
+  branchName    String
+  pushId        String   @unique
+  provider      String?
+  createdAt     DateTime @default(now())
+  
+  commit        Commit?  @relation(fields: [commitId], references: [id])
+  pullRequest   PullRequest?
+  
+  @@index([tenantId])
+}
+
+model PullRequest {
+  id            String   @id @default(cuid())
+  tenantId      String
+  projectId     String
+  pushId        String   @unique
+  prNumber      Int
+  title         String
+  status        String   @default("open") // open, merged, closed
+  sourceBranch  String
+  targetBranch  String
+  mergeable     Boolean?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  push          Push     @relation(fields: [pushId], references: [id])
+  checkRuns     CheckRun[]
+  
+  @@index([tenantId])
+}
+
+model MergeLane {
+  id            String   @id @default(cuid())
+  tenantId      String
+  projectId     String
+  name          String
+  status        String   @default("green") // green, yellow, red
+  queuePosition Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  project       Project  @relation(fields: [projectId], references: [id])
+  checkRuns     CheckRun[]
+  
+  @@index([tenantId])
+  @@index([projectId])
+}
+
+model CheckRun {
+  id            String   @id @default(cuid())
+  tenantId      String
+  pullRequestId String?
+  mergeLaneId   String?
+  name          String
+  status        String   @default("pending") // pending, in_progress, completed
+  conclusion    String?  // success, failure, cancelled, skipped
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime @default(now())
+  
+  pullRequest   PullRequest? @relation(fields: [pullRequestId], references: [id])
+  mergeLane     MergeLane?   @relation(fields: [mergeLaneId], references: [id])
+  
+  @@index([tenantId])
+}
+
+// ==================== ARTIFACTS & EVIDENCE ====================
+
+model Artifact {
+  id            String   @id @default(cuid())
+  tenantId      String
+  beadId        String?
+  type          String   // diff, ci_log, runtime_log, agent_tool_output, policy_decision
+  name          String
+  content       String?  // Text content or JSON
+  contentUrl    String?  // External URL for large files
+  sha256        String?  // Content hash for immutability
+  metadata      String?  // JSON metadata
+  createdAt     DateTime @default(now())
+  
+  bead          Bead?    @relation(fields: [beadId], references: [id])
+  
+  @@index([tenantId])
+  @@index([beadId])
+  @@index([type])
+}
+
+// ==================== GOVERNANCE ====================
+
+model Policy {
+  id            String   @id @default(cuid())
+  tenantId      String
+  name          String
+  description   String?
+  version       Int      @default(1)
+  rules         String   // JSON ruleset
+  isActive      Boolean  @default(true)
+  effectiveFrom DateTime @default(now())
+  effectiveTo   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  
+  @@index([tenantId])
+}
+
+model Incident {
+  id            String   @id @default(cuid())
+  tenantId      String
+  projectId     String?
+  title         String
+  description   String?
+  severity      String   @default("medium") // low, medium, high, critical
+  status        String   @default("active") // active, investigating, resolved, closed
+  scope         String?  // JSON scope definition
+  expiresAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  project       Project? @relation(fields: [projectId], references: [id])
+  
+  @@index([tenantId])
+  @@index([projectId])
+  @@index([status])
+}
+
+// ==================== AUDIT LEDGER ====================
+
+model AuditLedgerEntry {
+  id                String   @id @default(cuid())
+  tenantId          String
+  userId            String?
+  actorId           String?  // Can be user_id or service_account_id
+  actorRole         String?
+  scope             String?  // JSON scope definition
+  commandIntent     String
+  commandType       String?
+  entityType        String?
+  entityId          String?
+  policyVersion     String?
+  evidenceRefs      String?  // JSON array of evidence references
+  missingEvidence   String?  // JSON array of missing evidence
+  correlationId     String?
+  causationId       String?
+  eventPayload      String?  // JSON full event payload
+  occurredAt        DateTime @default(now())
+  recordedAt        DateTime @default(now())
+  
+  tenant            Tenant   @relation(fields: [tenantId], references: [id])
+  user              User?    @relation(fields: [userId], references: [id])
+  
+  @@index([tenantId])
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([occurredAt])
+}
+
+// ==================== EVENTS (Immutable Event Store) ====================
+
+model Event {
+  id              String   @id @default(cuid())
+  tenantId        String
+  eventId         String   @unique
+  eventType       String
+  eventVersion    Int      @default(1)
+  actor           String?  // JSON actor definition
+  entityType      String?
+  entityId        String?
+  payload         String   // JSON payload
+  evidenceRefs    String?  // JSON array of evidence references
+  correlationId   String?
+  causationId     String?
+  occurredAt      DateTime @default(now())
+  recordedAt      DateTime @default(now())
+  
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  
+  @@index([tenantId])
+  @@index([eventType])
+  @@index([entityType, entityId])
+  @@index([recordedAt])
+}
