@@ -5,6 +5,7 @@ import Courier from "./Courier.jsx";
 import TrafficLayer from "./TrafficLayer.jsx";
 import Zone from "./Zone.jsx";
 import Minimap from "./Minimap.jsx";
+import BuildingDialog from "./BuildingDialog.jsx";
 
 const ASSET_BASE = "/assets";
 const buildingSprites = {
@@ -106,6 +107,8 @@ function hashString(value) {
 export default function TownMap() {
   const [snapshot, setSnapshot] = useState({ agents: [] });
   const [isDemoMode, setIsDemoMode] = useState(true);
+  const [selectedBuilding, setSelectedBuilding] = useState(null); // JRPG Interaction State
+
   const layout = layoutData.layout;
   
   // Viewport State
@@ -117,11 +120,11 @@ export default function TownMap() {
 
   const mockSnapshot = {
     agents: [
-      { name: "Mayor Alice", role: "mayor", status: "WORKING" }, // At City Hall (default fallback)
-      { name: "Engineer Bob", role: "engineer", status: "IDLE" }, // At House
-      { name: "Engineer Charlie", role: "engineer", status: "WORKING" }, // At Office
-      { name: "Engineer Dave", role: "engineer", status: "MERGING" }, // In Queue
-      { name: "Polecat P1", role: "polecat", status: "ROAMING" }, // Roaming
+      { name: "Mayor Alice", role: "mayor", status: "WORKING" },
+      { name: "Engineer Bob", role: "engineer", status: "IDLE" },
+      { name: "Engineer Charlie", role: "engineer", status: "WORKING" },
+      { name: "Engineer Dave", role: "engineer", status: "MERGING" },
+      { name: "Polecat P1", role: "polecat", status: "ROAMING" },
       { name: "Polecat P2", role: "polecat", status: "ROAMING" }
     ]
   };
@@ -211,7 +214,6 @@ export default function TownMap() {
     mergeQueue.map((agent, index) => [agent.name, index])
   );
 
-  // Compute agent positions once for both Map and Minimap
   const agentPositions = useMemo(() => {
     return snapshot.agents.map((agent) => {
       const zoneKey = statusToZone[agent.status] ?? "city_hall";
@@ -281,7 +283,60 @@ export default function TownMap() {
   }, [agentPositions, approvalOfficeIso]);
 
 
-  // Viewport Handlers
+  // --- JRPG Interaction Logic ---
+
+  const handleZoneClick = (zoneKey) => {
+    if (zoneKey === "merge_depot") {
+      setSelectedBuilding("REFINERY");
+    } else if (zoneKey === "city_hall") {
+      setSelectedBuilding("CITY_HALL");
+    }
+  };
+
+  const renderDialogContent = () => {
+    if (!selectedBuilding) return null;
+
+    if (selectedBuilding === "REFINERY") {
+      const queue = snapshot.agents.filter(a => a.status === "MERGING");
+      return (
+        <BuildingDialog title="Refinery Merge Queue" onClose={() => setSelectedBuilding(null)}>
+          {queue.length === 0 ? (
+            <p>The queue is currently empty. Production is halted!</p>
+          ) : (
+            <ul className="queue-list" style={{ listStyle: 'none', padding: 0 }}>
+              {queue.map((agent, i) => (
+                <li key={i} className="queue-item" style={{display:'flex', justifyContent:'space-between', borderBottom:'1px dashed #666', padding:'4px 0'}}>
+                  <span>{i + 1}. {agent.name}</span>
+                  <span style={{color:'#fbbf24'}}>[{agent.role}]</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </BuildingDialog>
+      );
+    }
+
+    if (selectedBuilding === "CITY_HALL") {
+      const mayor = snapshot.agents.find(a => a.role === 'mayor');
+      return (
+        <BuildingDialog title="Mayor's Office" onClose={() => setSelectedBuilding(null)}>
+          <div style={{display:'flex', gap:'10px', alignItems:'center'}}>
+            {characterSprites.mayor && <img src={characterSprites.mayor} width="32" style={{imageRendering:'pixelated'}} />}
+            <div>
+                <p>Mayor: <span style={{color: '#fbbf24'}}>{mayor?.name || "Unknown"}</span></p>
+                <p>Status: {mayor?.status || "AWOL"}</p>
+            </div>
+          </div>
+          <br/>
+          <p style={{fontStyle:'italic', color:'#aaa'}}>Current Policy:</p>
+          <p>"Merge First, Ask Questions Later"</p>
+        </BuildingDialog>
+      );
+    }
+  };
+
+
+  // --- Viewport Handlers ---
   const handleWheel = (e) => {
     e.preventDefault();
     const newScale = Math.min(Math.max(scale - e.deltaY * 0.001, 0.2), 3);
@@ -289,6 +344,8 @@ export default function TownMap() {
   };
 
   const handleMouseDown = (e) => {
+    // Only drag if not clicking a building/dialog
+    if(e.target.closest('.rpg-dialog')) return;
     setIsDragging(true);
     lastMousePos.current = { x: e.clientX, y: e.clientY };
   };
@@ -297,13 +354,10 @@ export default function TownMap() {
     if (!isDragging) return;
     const dx = e.clientX - lastMousePos.current.x;
     const dy = e.clientY - lastMousePos.current.y;
-    
-    // Divide by scale to ensure 1:1 movement match with cursor
     setOffset((prev) => ({ 
       x: prev.x + (dx / scale), 
       y: prev.y + (dy / scale) 
     }));
-    
     lastMousePos.current = { x: e.clientX, y: e.clientY };
   };
 
@@ -341,6 +395,9 @@ export default function TownMap() {
 
       <Minimap zones={zones} agents={agentPositions} layout={layout} />
 
+      {/* Render the JRPG Dialog if active */}
+      {renderDialogContent()}
+
       <div 
         className="viewport" 
         ref={viewportRef}
@@ -361,17 +418,48 @@ export default function TownMap() {
               const asset = zoneSprites[zone.key] ?? {};
               const position = toIso(zone.x, zone.y, origin);
               const zIndex = (zone.x + zone.y) * 10;
+              
+              // JRPG Interaction: Check if this zone is clickable
+              const isInteractive = zone.key === 'merge_depot' || zone.key === 'city_hall';
+
               return (
-                <Zone
+                <div 
                   key={zone.id}
-                  label={zone.label}
-                  position={position}
-                  zIndex={zIndex}
-                  sprite={asset.sprite}
-                  cols={asset.cols}
-                  rows={asset.rows}
-                  fallbackEmoji={asset.emoji}
-                />
+                  onClick={(e) => {
+                    if(isInteractive) {
+                        e.stopPropagation(); // Prevent drag start
+                        handleZoneClick(zone.key);
+                    }
+                  }}
+                  style={{ 
+                    cursor: isInteractive ? 'pointer' : 'default',
+                    position: 'absolute', // Ensure wrapper doesn't break layout
+                    top: 0, left: 0, width: 0, height: 0 // Wrapper shouldn't take space
+                  }}
+                >
+                    <Zone
+                        label={zone.label}
+                        position={position}
+                        zIndex={zIndex}
+                        sprite={asset.sprite}
+                        cols={asset.cols}
+                        rows={asset.rows}
+                        fallbackEmoji={asset.emoji}
+                    />
+                    {isInteractive && (
+                        <div 
+                            className="interaction-arrow" 
+                            style={{
+                                position: 'absolute',
+                                left: position.x,
+                                top: position.y - 60, // Float above building
+                                zIndex: zIndex + 1000,
+                            }}
+                        >
+                            ▼
+                        </div>
+                    )}
+                </div>
               );
             })}
             <TrafficLayer

@@ -1,632 +1,279 @@
+/* Import the pixel font */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
 :root {
+  --bg-grass: #4fa46d;
+  --bg-water: #4c91cd;
+  --text-retro: #1f1f1f;
   color-scheme: light;
-  font-family: "Inter", "Segoe UI", sans-serif;
-  background-color: #f5f4f0;
-  color: #1f1f1f;
 }
 
 body {
   margin: 0;
   padding: 0;
+  background-color: #222; /* Dark frame for the "screen" */
+  font-family: 'Press Start 2P', cursive; /* Apply font globally */
+  overflow: hidden;
+  color: #1f1f1f;
 }
 
 .app {
-  padding: 24px;
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
 }
 
+/* Header style like a game HUD */
 .app-header {
-  margin-bottom: 16px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(to bottom, #d32f2f, #b71c1c);
+  color: white;
+  z-index: 6000;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-sizing: border-box;
 }
 
 .app-header h1 {
-  margin: 0 0 4px;
-  font-size: 28px;
+  font-size: 16px;
+  margin: 0;
+  text-shadow: 2px 2px #000;
 }
 
 .app-header p {
+  font-size: 10px;
+  opacity: 0.8;
   margin: 0;
-  color: #555;
 }
 
+/* The Game World Container */
 .town-map {
-
-  display: flex;
-
-  justify-content: center;
-
-  align-items: center;
-
-  padding: 0;
-
+  background-color: var(--bg-grass);
+  /* Optional: Add a tiling grass texture pattern here */
+  background-image: 
+    linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
+  background-size: 64px 32px; /* Matches your tile size */
   width: 100vw;
-
   height: 100vh;
-
   overflow: hidden;
-
-  background: #5c9e68;
-
   position: relative;
-
+  image-rendering: pixelated; /* CRITICAL for pixel art crispness */
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
-
-
 
 .viewport {
-
   width: 100%;
-
   height: 100%;
-
   overflow: hidden;
-
   position: relative;
-
   cursor: grab;
-
 }
-
-
 
 .viewport:active {
-
   cursor: grabbing;
-
 }
-
-
 
 .world {
-
   position: absolute;
-
   transform-origin: 0 0;
-
   transition: transform 0.1s ease-out;
-
   will-change: transform;
-
 }
-
-
 
 .grid {
-
   position: relative;
-
-  /* Remove fixed background here, it moves with the world */
-
-  /* background: radial-gradient... moved to a lower layer or handled differently if we want parallax */
-
 }
 
+/* Character Names / Labels in the world */
+.zone-label, .character-avatar {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 8px;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  padding: 2px 4px;
+  border-radius: 4px;
+  border: 1px solid white;
+}
+
+/* Traffic and other layers */
 .traffic-layer {
-
   position: absolute;
-
   top: 0;
-
   left: 0;
-
   width: 100%;
-
   height: 100%;
-
   pointer-events: none;
-
   z-index: 2000;
-
 }
 
 .traffic-line {
-
   stroke: #ffd700;
-
   stroke-width: 3;
-
   stroke-dasharray: 8 10;
-
   stroke-linecap: round;
-
   animation: traffic-flow 2s linear infinite;
-
 }
 
 @keyframes traffic-flow {
-
-  from {
-
-    stroke-dashoffset: 0;
-
-  }
-
-  to {
-
-    stroke-dashoffset: -36;
-
-  }
-
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -36; }
 }
 
 .courier {
-
   position: absolute;
-
   width: 12px;
-
   height: 12px;
-
   background: #fbbf24;
-
   border: 2px solid #b45309;
-
   border-radius: 4px;
-
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
-
   animation: courier-flight 2s linear infinite;
-
-  transform: translate(0, 0);
-
   pointer-events: none;
-
 }
 
 @keyframes courier-flight {
-
-  from {
-
-    transform: translate(0, 0);
-
-  }
-
-  to {
-
-    transform: translate(var(--dx), var(--dy));
-
-  }
-
+  from { transform: translate(0, 0); }
+  to { transform: translate(var(--dx), var(--dy)); }
 }
 
-
-
+/* Character & Zone Styles */
 .zone {
-
   position: absolute;
-
   display: flex;
-
   flex-direction: column;
-
   align-items: center;
-
   transform: translate(-50%, -100%);
   transform-origin: bottom center;
-
   text-align: center;
-
   pointer-events: none;
-
 }
 
-
-
-.zone-sprite {
-
-  /* Common container for both img and fallback */
-
+.zone-sprite, .character-sprite-container {
   display: flex;
-
   justify-content: center;
-
   align-items: flex-end;
   width: 64px;
   height: 64px;
-
 }
 
-.zone-sprite > div {
+.zone-sprite > div, .character-sprite-container > div {
   width: 100% !important;
   height: 100% !important;
   overflow: hidden;
 }
 
-
-
-.zone-sprite img {
-
-
-
-  /* Assumes zone assets are single images, if they are sheets, we need to clip them too */
-
-
-
+.zone-sprite img, .character-sprite-container img {
   width: 100%;
   height: 100%;
   object-fit: contain;
-
-
-
   display: block;
   mix-blend-mode: multiply;
-
-
-
   filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.2));
-
-
-
 }
-
-
-
-
-
-
 
 .zone-fallback {
-
-
-
-  /* Only show box if falling back to emoji */
-
-
-
   width: 72px;
-
-
-
   height: 72px;
-
-
-
   border-radius: 16px;
-
-
-
   background: #fff7ed;
-
-
-
   border: 2px solid #d6cbb5;
-
-
-
   display: grid;
-
-
-
   place-items: center;
-
-
-
   font-size: 28px;
-
-
-
   box-shadow: 0 8px 10px rgba(0, 0, 0, 0.2);
-
-
-
 }
-
-
-
-
-
-
-
-.zone-label {
-
-
-
-  margin-top: 4px;
-
-
-
-  padding: 2px 8px;
-
-
-
-  border-radius: 999px;
-
-
-
-  background: rgba(255, 255, 255, 0.9);
-
-
-
-  font-size: 10px;
-
-
-
-  text-transform: uppercase;
-
-
-
-  letter-spacing: 0.08em;
-
-
-
-  color: #3f3f46;
-
-
-
-  white-space: nowrap;
-
-
-
-}
-
-
-
-
-
-
 
 .character {
-
-
-
   position: absolute;
-
-
-
-  /* Centering on the tile coordinate */
-
-
-
   transform: translate(-50%, -100%);
   transform-origin: bottom center;
-
-
-
   transition: top 1s linear, left 1s linear;
-
-
-
   display: flex;
-
-
-
   flex-direction: column;
-
-
-
   align-items: center;
-
-
-
   justify-content: flex-end;
-
-
-
   pointer-events: none;
-
-
-
   z-index: 100;
-
-
-
 }
 
-
-
-
-
-
-
-.character-sprite-container {
-
-
-
-  display: flex;
-
-
-
-  justify-content: center;
-
-
-
-  align-items: flex-end;
-  width: 64px;
-  height: 64px;
-
-
-
-  /* No background or border to let sprite blend */
-
-
-
-}
-
-.character-sprite-container > div {
-  width: 100% !important;
-  height: 100% !important;
-  overflow: hidden;
-}
-
-.character-sprite-container img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  display: block;
-  mix-blend-mode: multiply;
-}
-
-
-
-.character-idle {
-
-  opacity: 0.8;
-
-}
-
-
-
-.status-indicator {
-
-  position: absolute;
-
-  top: -40px;
-
-  font-size: 20px;
-
-  animation: bounce 1s infinite;
-
-  z-index: 101;
-
-}
-
-
-
+/* Animations for "Juice" */
 @keyframes bounce {
-
-  0%, 100% {
-
-    transform: translateY(0);
-
-  }
-
-  50% {
-
-    transform: translateY(-5px);
-
-  }
-
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
 }
 
-
-
-.character-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #1f2937;
-  display: grid;
-
-  place-items: center;
-
-  font-size: 12px;
-
-  font-weight: 600;
-
-  border: 2px solid #ffffff;
-
-  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.25);
-
+/* Add a floating arrow over interactive buildings */
+.interaction-arrow {
+  color: yellow;
+  font-size: 20px;
+  animation: bounce 0.8s infinite;
+  text-shadow: 2px 2px black;
+  pointer-events: none;
 }
-
-
 
 /* Minimap */
-
 .minimap-container {
-
   position: absolute;
-
   bottom: 20px;
-
   right: 20px;
-
   width: 200px;
-
   height: 150px;
-
   background: rgba(255, 255, 255, 0.9);
-
   border: 2px solid #ccc;
-
   border-radius: 8px;
-
   overflow: hidden;
-
   z-index: 5000;
-
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-
 }
-
-
 
 .minimap-content {
-
   width: 100%;
-
   height: 100%;
-
   position: relative;
-
 }
-
-
 
 .minimap-dot {
-
   position: absolute;
-
   width: 4px;
-
   height: 4px;
-
   border-radius: 50%;
-
   transform: translate(-50%, -50%);
-
 }
-
-
 
 /* Controls */
-
 .map-controls {
-
   position: absolute;
-
   bottom: 20px;
-
   left: 20px;
-
   display: flex;
-
   gap: 8px;
-
   z-index: 5000;
-
 }
-
-
 
 .control-btn {
-
   background: white;
-
   border: 1px solid #ccc;
-
   border-radius: 4px;
-
   width: 32px;
-
   height: 32px;
-
   font-size: 18px;
-
   cursor: pointer;
-
   display: grid;
-
   place-items: center;
-
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-
+  font-family: inherit;
 }
 
-
-
 .control-btn:hover {
-
   background: #f0f0f0;
-
 }
