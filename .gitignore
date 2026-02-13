@@ -64,6 +64,7 @@ settings/
 
 # Nix build
 result
+.fork-integration.json
 
 # Xcode
 DerivedData/
