@@ -21,10 +21,10 @@ const (
 
 // Info holds activity information for display.
 type Info struct {
-	LastActivity time.Time // Raw timestamp of last activity
-	Duration     time.Duration // Time since last activity
-	FormattedAge string    // Human-readable age (e.g., "2m", "1h")
-	ColorClass   string    // CSS class for coloring (green, yellow, red, unknown)
+	LastActivity time.Time     `json:"last_activity"`  // Raw timestamp of last activity
+	Duration     time.Duration `json:"duration"`       // Time since last activity
+	FormattedAge string        `json:"formatted_age"`  // Human-readable age (e.g., "2m", "1h")
+	ColorClass   string        `json:"color_class"`    // CSS class for coloring (green, yellow, red, unknown)
 }
 
 // Calculate computes activity info from a last-activity timestamp.

@@ -5,7 +5,9 @@ import Courier from "./Courier.jsx";
 import TrafficLayer from "./TrafficLayer.jsx";
 import Zone from "./Zone.jsx";
 import Minimap from "./Minimap.jsx";
-import BuildingDialog from "./BuildingDialog.jsx";
+import ReviewStationDialog from "./ReviewStationDialog.jsx";
+import HouseDialog from "./HouseDialog.jsx";
+import MayorOfficeDialog from "./MayorOfficeDialog.jsx";
 
 const ASSET_BASE = "/assets";
 const buildingSprites = {
@@ -108,6 +110,7 @@ export default function TownMap() {
   const [snapshot, setSnapshot] = useState({ agents: [] });
   const [isDemoMode, setIsDemoMode] = useState(true);
   const [selectedBuilding, setSelectedBuilding] = useState(null); // JRPG Interaction State
+  const [selectedZoneId, setSelectedZoneId] = useState(null);
 
   const layout = layoutData.layout;
   
@@ -285,53 +288,44 @@ export default function TownMap() {
 
   // --- JRPG Interaction Logic ---
 
-  const handleZoneClick = (zoneKey) => {
-    if (zoneKey === "merge_depot") {
-      setSelectedBuilding("REFINERY");
+  const handleZoneClick = (zoneKey, zoneId) => {
+    if (zoneKey === "merge_depot" || zoneKey === "approval_office") {
+      setSelectedBuilding("REVIEW_STATION");
     } else if (zoneKey === "city_hall") {
       setSelectedBuilding("CITY_HALL");
+    } else if (zoneKey === "residential_district") {
+      setSelectedBuilding("HOUSE");
+      setSelectedZoneId(zoneId);
     }
+  };
+
+  const closeDialog = () => {
+    setSelectedBuilding(null);
+    setSelectedZoneId(null);
+  };
+
+  const resolveAgentName = () => {
+    if (!selectedZoneId) return null;
+    const agent = agentPositions.find((a) => {
+      const spot = pickResidentialSpot(a.name, residential);
+      return spot && `house_${spot.x}_${spot.y}` === selectedZoneId;
+    });
+    return agent?.name ?? null;
   };
 
   const renderDialogContent = () => {
     if (!selectedBuilding) return null;
 
-    if (selectedBuilding === "REFINERY") {
-      const queue = snapshot.agents.filter(a => a.status === "MERGING");
-      return (
-        <BuildingDialog title="Refinery Merge Queue" onClose={() => setSelectedBuilding(null)}>
-          {queue.length === 0 ? (
-            <p>The queue is currently empty. Production is halted!</p>
-          ) : (
-            <ul className="queue-list" style={{ listStyle: 'none', padding: 0 }}>
-              {queue.map((agent, i) => (
-                <li key={i} className="queue-item" style={{display:'flex', justifyContent:'space-between', borderBottom:'1px dashed #666', padding:'4px 0'}}>
-                  <span>{i + 1}. {agent.name}</span>
-                  <span style={{color:'#fbbf24'}}>[{agent.role}]</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </BuildingDialog>
-      );
+    if (selectedBuilding === "REVIEW_STATION") {
+      return <ReviewStationDialog onClose={closeDialog} />;
     }
 
     if (selectedBuilding === "CITY_HALL") {
-      const mayor = snapshot.agents.find(a => a.role === 'mayor');
-      return (
-        <BuildingDialog title="Mayor's Office" onClose={() => setSelectedBuilding(null)}>
-          <div style={{display:'flex', gap:'10px', alignItems:'center'}}>
-            {characterSprites.mayor && <img src={characterSprites.mayor} width="32" style={{imageRendering:'pixelated'}} />}
-            <div>
-                <p>Mayor: <span style={{color: '#fbbf24'}}>{mayor?.name || "Unknown"}</span></p>
-                <p>Status: {mayor?.status || "AWOL"}</p>
-            </div>
-          </div>
-          <br/>
-          <p style={{fontStyle:'italic', color:'#aaa'}}>Current Policy:</p>
-          <p>"Merge First, Ask Questions Later"</p>
-        </BuildingDialog>
-      );
+      return <MayorOfficeDialog onClose={closeDialog} snapshot={snapshot} />;
+    }
+
+    if (selectedBuilding === "HOUSE") {
+      return <HouseDialog onClose={closeDialog} agentName={resolveAgentName()} />;
     }
   };
 
@@ -420,15 +414,15 @@ export default function TownMap() {
               const zIndex = (zone.x + zone.y) * 10;
               
               // JRPG Interaction: Check if this zone is clickable
-              const isInteractive = zone.key === 'merge_depot' || zone.key === 'city_hall';
+              const isInteractive = zone.key === 'merge_depot' || zone.key === 'city_hall' || zone.key === 'approval_office' || zone.key === 'residential_district';
 
               return (
-                <div 
+                <div
                   key={zone.id}
                   onClick={(e) => {
                     if(isInteractive) {
                         e.stopPropagation(); // Prevent drag start
-                        handleZoneClick(zone.key);
+                        handleZoneClick(zone.key, zone.id);
                     }
                   }}
                   style={{ 

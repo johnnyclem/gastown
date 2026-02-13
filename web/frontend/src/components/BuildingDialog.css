@@ -50,7 +50,7 @@
 .dialog-content {
   font-size: 12px;
   line-height: 1.8;
-  max-height: 200px;
+  max-height: 300px;
   overflow-y: auto;
 }
 

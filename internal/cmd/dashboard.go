@@ -72,9 +72,19 @@ func runDashboard(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("creating town frontend handler: %w", err)
 	}
 
+	// API handlers for interactive dashboard
+	apiHandler := web.NewAPIHandler(30*time.Second, 60*time.Second)
+	mergeQueueHandler := web.NewMergeQueueHandler(threadSafeFetcher)
+	polecatListHandler := web.NewPolecatListHandler(threadSafeFetcher)
+	paneOutputHandler := web.NewPaneOutputHandler()
+
 	mux := http.NewServeMux()
 	mux.Handle("/", handler)
 	mux.Handle("/api/town/snapshot", snapshotHandler)
+	mux.Handle("/api/merge-queue", mergeQueueHandler)
+	mux.Handle("/api/polecats", polecatListHandler)
+	mux.Handle("/api/pane-output", paneOutputHandler)
+	mux.Handle("/api/", apiHandler)
 	mux.Handle("/town", http.RedirectHandler("/town/", http.StatusMovedPermanently))
 	mux.Handle("/town/", http.StripPrefix("/town/", frontendHandler))
 
