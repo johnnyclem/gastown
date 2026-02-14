@@ -158,7 +158,27 @@ body {
   pointer-events: none;
 }
 
-.zone-sprite, .character-sprite-container {
+.zone-interactive {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.zone-interactive:hover .zone-sprite {
+  filter: brightness(1.15);
+}
+
+.zone-sprite {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  width: 128px;
+  height: 128px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: transparent;
+}
+
+.character-sprite-container {
   display: flex;
   justify-content: center;
   align-items: flex-end;
@@ -172,13 +192,10 @@ body {
   overflow: hidden;
 }
 
-.zone-sprite img, .character-sprite-container img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  display: block;
+.zone-sprite img,
+.character-sprite-container img {
   mix-blend-mode: multiply;
-  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.2));
+  filter: contrast(1.1) saturate(1.1);
 }
 
 .zone-fallback {
@@ -212,13 +229,17 @@ body {
   50% { transform: translateY(-4px); }
 }
 
-/* Add a floating arrow over interactive buildings */
+/* Floating arrow over interactive buildings */
 .interaction-arrow {
   color: yellow;
   font-size: 20px;
   animation: bounce 0.8s infinite;
   text-shadow: 2px 2px black;
   pointer-events: none;
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 /* Minimap */
@@ -276,4 +297,16 @@ body {
 
 .control-btn:hover {
   background: #f0f0f0;
+}
+
+/* Expanded (semi-fullscreen) mode */
+.town-map-expanded {
+  position: fixed;
+  top: 10vh;
+  left: 0;
+  width: 100vw;
+  height: 80vh;
+  z-index: 7000;
+  border-radius: 0;
+  box-shadow: 0 0 0 100vmax rgba(0,0,0,0.5);
 }

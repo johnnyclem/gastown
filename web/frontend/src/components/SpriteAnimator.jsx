@@ -50,9 +50,7 @@ export default function SpriteAnimator({
           position: "absolute",
           left: 0,
           top: 0,
-          transform: `translate(-${frameX}%, -${frameY}%)`,
-          mixBlendMode: "multiply", // Hides the white background
-          filter: "contrast(1.1)" // Pop the colors slightly
+          transform: `translate(-${frameX}%, -${frameY}%)`
         }}
       />
     </div>

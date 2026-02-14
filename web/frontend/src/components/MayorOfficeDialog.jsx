@@ -19,10 +19,13 @@ export default function MayorOfficeDialog({ onClose, snapshot }) {
   const [cmdInput, setCmdInput] = useState("");
   const [cmdOutput, setCmdOutput] = useState(null);
   const [cmdRunning, setCmdRunning] = useState(false);
+  const [loadError, setLoadError] = useState(null);
 
   useEffect(() => {
-    fetchOptions().then(setOptions).catch(() => {});
-    fetchMailInbox().then(setMail).catch(() => {});
+    Promise.all([
+      fetchOptions().then(setOptions),
+      fetchMailInbox().then(setMail),
+    ]).catch((e) => setLoadError(e.message));
   }, []);
 
   const handleRunCommand = async (cmd) => {
@@ -206,6 +209,11 @@ export default function MayorOfficeDialog({ onClose, snapshot }) {
           </button>
         ))}
       </div>
+      {loadError && (
+        <p style={{ color: "#fbbf24", fontSize: "0.75em", marginBottom: "6px" }}>
+          {loadError}
+        </p>
+      )}
       {tab === "Overview" && renderOverview()}
       {tab === "Mail" && renderMail()}
       {tab === "Admin" && renderAdmin()}

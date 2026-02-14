@@ -1,12 +1,9 @@
 import SpriteAnimator from "./SpriteAnimator.jsx";
 
 const SPRITE_CONFIG = {
-  sheetCols: 3,
-  sheetRows: 4,
-  frameWidth: 32,
-  frameHeight: 48,
-  fps: 8,
-  scale: 1.5
+  sheetCols: 4,
+  sheetRows: 3,
+  fps: 8
 };
 
 export default function Character({

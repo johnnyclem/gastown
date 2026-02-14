@@ -1,8 +1,31 @@
 const API_BASE = "";
 
-async function fetchJSON(url) {
-  const resp = await fetch(url);
-  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+class ApiError extends Error {
+  constructor(message, { status, isNetwork } = {}) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.isNetwork = isNetwork ?? false;
+  }
+}
+
+async function fetchJSON(url, opts = {}) {
+  let resp;
+  try {
+    resp = await fetch(url, opts);
+  } catch (e) {
+    throw new ApiError(
+      "Cannot reach backend — is the Go server running on :8080?",
+      { isNetwork: true }
+    );
+  }
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => "");
+    throw new ApiError(
+      text || `HTTP ${resp.status}`,
+      { status: resp.status }
+    );
+  }
   return resp.json();
 }
 
@@ -31,11 +54,9 @@ export function fetchCommands() {
 }
 
 export async function runCommand(command) {
-  const resp = await fetch(`${API_BASE}/api/run`, {
+  return fetchJSON(`${API_BASE}/api/run`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ command }),
   });
-  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-  return resp.json();
 }

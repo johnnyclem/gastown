@@ -40,8 +40,35 @@ export default function ReviewStationDialog({ onClose }) {
     };
   }, []);
 
+  const retry = () => {
+    setError(null);
+    setQueue(null);
+    fetchMergeQueue()
+      .then(setQueue)
+      .catch((e) => setError(e.message));
+  };
+
   const content = () => {
-    if (error) return <p style={{ color: "#ef4444" }}>Error: {error}</p>;
+    if (error)
+      return (
+        <div>
+          <p style={{ color: "#ef4444", marginBottom: "8px" }}>{error}</p>
+          <button
+            onClick={retry}
+            style={{
+              background: "#1e293b",
+              border: "1px solid #334155",
+              color: "#93c5fd",
+              cursor: "pointer",
+              padding: "4px 12px",
+              borderRadius: "4px",
+              fontSize: "0.8em",
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      );
     if (!queue) return <p>Loading merge queue...</p>;
     if (queue.length === 0) return <p>No open PRs in the queue.</p>;
 

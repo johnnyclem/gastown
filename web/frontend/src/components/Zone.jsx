@@ -1,12 +1,16 @@
 import SpriteAnimator from "./SpriteAnimator.jsx";
 
-export default function Zone({ label, position, zIndex, sprite, cols, rows, fallbackEmoji }) {
+export default function Zone({ label, position, zIndex, sprite, cols, rows, fallbackEmoji, interactive, onClick }) {
   return (
-    <div className="zone" style={{ ...position, zIndex }}>
+    <div
+      className={`zone${interactive ? " zone-interactive" : ""}`}
+      style={{ ...position, zIndex }}
+      onClick={onClick}
+    >
       <div className="zone-sprite">
         {sprite ? (
-          <SpriteAnimator 
-            src={sprite} 
+          <SpriteAnimator
+            src={sprite}
             sheetCols={cols}
             sheetRows={rows}
             animate={false}
@@ -20,6 +24,7 @@ export default function Zone({ label, position, zIndex, sprite, cols, rows, fall
         )}
       </div>
       <span className="zone-label">{label}</span>
+      {interactive && <div className="interaction-arrow">▼</div>}
     </div>
   );
 }

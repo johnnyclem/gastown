@@ -9,18 +9,26 @@ import ReviewStationDialog from "./ReviewStationDialog.jsx";
 import HouseDialog from "./HouseDialog.jsx";
 import MayorOfficeDialog from "./MayorOfficeDialog.jsx";
 
-const ASSET_BASE = "/assets";
+import cityHallImg from "../assets/building_city_hall.png";
+import houseImg from "../assets/building_house_small.png";
+import officeImg from "../assets/building_office_large.png";
+import reviewStationImg from "../assets/building_review_station.png";
+import depotImg from "../assets/building_depot.png";
+import mayorImg from "../assets/char_mayor.png";
+import engineerImg from "../assets/char_engineer.png";
+import polecatImg from "../assets/char_polecat.png";
+
 const buildingSprites = {
-  cityHall: `${ASSET_BASE}/building_city_hall.png`,
-  house: `${ASSET_BASE}/building_house_small.png`,
-  office: `${ASSET_BASE}/building_office_large.png`,
-  reviewStation: `${ASSET_BASE}/building_review_station.png`,
-  depot: `${ASSET_BASE}/building_depot.png`
+  cityHall: cityHallImg,
+  house: houseImg,
+  office: officeImg,
+  reviewStation: reviewStationImg,
+  depot: depotImg
 };
 const characterSprites = {
-  mayor: `${ASSET_BASE}/char_mayor.png`,
-  engineer: `${ASSET_BASE}/char_engineer.png`,
-  polecat: `${ASSET_BASE}/char_polecat.png`
+  mayor: mayorImg,
+  engineer: engineerImg,
+  polecat: polecatImg
 };
 
 const TILE_WIDTH = 64;
@@ -37,32 +45,32 @@ const zoneSprites = {
   city_hall: {
     sprite: buildingSprites.cityHall,
     emoji: "🏛️",
-    cols: 4,
-    rows: 4
+    cols: 3,
+    rows: 3
   },
   approval_office: {
     sprite: buildingSprites.reviewStation,
     emoji: "📋",
-    cols: 4,
-    rows: 4
+    cols: 3,
+    rows: 3
   },
   merge_depot: {
     sprite: buildingSprites.depot,
     emoji: "🚌",
-    cols: 4,
-    rows: 4
+    cols: 3,
+    rows: 3
   },
   residential_district: {
     sprite: buildingSprites.house,
     emoji: "🏡",
-    cols: 4,
-    rows: 4
+    cols: 3,
+    rows: 3
   },
   commercial_district: {
     sprite: buildingSprites.office,
     emoji: "🏢",
-    cols: 4,
-    rows: 4
+    cols: 3,
+    rows: 3
   }
 };
 
@@ -118,6 +126,7 @@ export default function TownMap() {
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const lastMousePos = useRef({ x: 0, y: 0 });
   const viewportRef = useRef(null);
 
@@ -360,7 +369,7 @@ export default function TownMap() {
   };
 
   return (
-    <div className="town-map">
+    <div className={`town-map${isExpanded ? " town-map-expanded" : ""}`}>
       <button
         onClick={() => setIsDemoMode(!isDemoMode)}
         style={{
@@ -385,6 +394,9 @@ export default function TownMap() {
          <button className="control-btn" onClick={() => setScale(s => Math.min(s + 0.2, 3))}>+</button>
          <button className="control-btn" onClick={() => setScale(s => Math.max(s - 0.2, 0.2))}>-</button>
          <button className="control-btn" onClick={() => { setScale(1); setOffset({x:0,y:0}); }}>⟲</button>
+         <button className="control-btn" onClick={() => setIsExpanded(e => !e)} title={isExpanded ? "Collapse" : "Expand"}>
+           {isExpanded ? "⊟" : "⊞"}
+         </button>
       </div>
 
       <Minimap zones={zones} agents={agentPositions} layout={layout} />
@@ -412,48 +424,24 @@ export default function TownMap() {
               const asset = zoneSprites[zone.key] ?? {};
               const position = toIso(zone.x, zone.y, origin);
               const zIndex = (zone.x + zone.y) * 10;
-              
-              // JRPG Interaction: Check if this zone is clickable
               const isInteractive = zone.key === 'merge_depot' || zone.key === 'city_hall' || zone.key === 'approval_office' || zone.key === 'residential_district';
 
               return (
-                <div
+                <Zone
                   key={zone.id}
-                  onClick={(e) => {
-                    if(isInteractive) {
-                        e.stopPropagation(); // Prevent drag start
-                        handleZoneClick(zone.key, zone.id);
-                    }
-                  }}
-                  style={{ 
-                    cursor: isInteractive ? 'pointer' : 'default',
-                    position: 'absolute', // Ensure wrapper doesn't break layout
-                    top: 0, left: 0, width: 0, height: 0 // Wrapper shouldn't take space
-                  }}
-                >
-                    <Zone
-                        label={zone.label}
-                        position={position}
-                        zIndex={zIndex}
-                        sprite={asset.sprite}
-                        cols={asset.cols}
-                        rows={asset.rows}
-                        fallbackEmoji={asset.emoji}
-                    />
-                    {isInteractive && (
-                        <div 
-                            className="interaction-arrow" 
-                            style={{
-                                position: 'absolute',
-                                left: position.x,
-                                top: position.y - 60, // Float above building
-                                zIndex: zIndex + 1000,
-                            }}
-                        >
-                            ▼
-                        </div>
-                    )}
-                </div>
+                  label={zone.label}
+                  position={position}
+                  zIndex={zIndex}
+                  sprite={asset.sprite}
+                  cols={asset.cols}
+                  rows={asset.rows}
+                  fallbackEmoji={asset.emoji}
+                  interactive={isInteractive}
+                  onClick={isInteractive ? (e) => {
+                    e.stopPropagation();
+                    handleZoneClick(zone.key, zone.id);
+                  } : undefined}
+                />
               );
             })}
             <TrafficLayer
