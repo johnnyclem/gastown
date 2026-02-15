@@ -2,6 +2,11 @@ import Foundation
 
 @MainActor
 final class AppState: ObservableObject {
+    private enum FetchResult<T> {
+        case success(T)
+        case failure(String)
+    }
+
     @Published var settings: ConnectionSettings
     @Published var snapshot: DashboardSnapshot?
     @Published var projection: TownProjection?
@@ -42,20 +47,56 @@ final class AppState: ObservableObject {
 
         let client = APIClient(settings: settings)
 
-        do {
-            async let snapshot = client.fetchSnapshot()
-            async let projection = client.fetchProjection()
-            async let alerts = client.fetchAlerts()
+        async let snapshotAttempt = attempt(label: "snapshot") {
+            try await client.fetchSnapshot()
+        }
+        async let projectionAttempt = attempt(label: "projection") {
+            try await client.fetchProjection()
+        }
+        async let alertsAttempt = attempt(label: "alerts") {
+            try await client.fetchAlerts()
+        }
 
-            let (snapshotValue, projectionValue, alertsValue) = try await (snapshot, projection, alerts)
+        let snapshotResult = await snapshotAttempt
+        let projectionResult = await projectionAttempt
+        let alertsResult = await alertsAttempt
 
-            self.snapshot = snapshotValue
-            self.projection = projectionValue
-            self.alerts = alertsValue.alerts
-            self.lastRefreshDate = Date()
-            self.errorMessage = nil
-        } catch {
-            self.errorMessage = error.localizedDescription
+        var successes = 0
+        var failures: [String] = []
+
+        switch snapshotResult {
+        case .success(let value):
+            snapshot = value
+            successes += 1
+        case .failure(let message):
+            failures.append(message)
+        }
+
+        switch projectionResult {
+        case .success(let value):
+            projection = value
+            successes += 1
+        case .failure(let message):
+            failures.append(message)
+        }
+
+        switch alertsResult {
+        case .success(let value):
+            alerts = value.alerts
+            successes += 1
+        case .failure(let message):
+            failures.append(message)
+        }
+
+        if successes > 0 {
+            lastRefreshDate = Date()
+            if failures.isEmpty {
+                errorMessage = nil
+            } else {
+                errorMessage = "Partial refresh: " + failures.joined(separator: " | ")
+            }
+        } else {
+            errorMessage = failures.joined(separator: " | ")
         }
     }
 
@@ -91,6 +132,17 @@ final class AppState: ObservableObject {
             try? await Task.sleep(nanoseconds: delay)
             if Task.isCancelled { break }
             await refresh()
+        }
+    }
+
+    private func attempt<T>(
+        label: String,
+        operation: @escaping () async throws -> T
+    ) async -> FetchResult<T> {
+        do {
+            return .success(try await operation())
+        } catch {
+            return .failure("\(label): \(error.localizedDescription)")
         }
     }
 }
