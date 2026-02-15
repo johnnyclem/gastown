@@ -64,3 +64,9 @@ settings/
 
 # Nix build
 result
+
+# Xcode
+DerivedData/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
