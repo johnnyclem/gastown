@@ -59,3 +59,9 @@ logs/
 settings/
 .events.jsonl
 .sqlhistory
+
+# Xcode
+DerivedData/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
