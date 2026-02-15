@@ -154,17 +154,15 @@ private struct DashboardTabView: View {
             .navigationTitle("EarthboundGastown")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    if appState.isRefreshing {
-                        ProgressView()
-                    } else {
-                        Button {
-                            Task {
-                                await appState.refresh()
-                            }
-                        } label: {
-                            Label("Refresh", systemImage: "arrow.clockwise")
+                    Button {
+                        Task {
+                            await appState.refresh()
                         }
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
                     }
+                    .disabled(appState.isRefreshing)
+                    .accessibilityLabel("Refresh")
                 }
             }
             .refreshable {
@@ -265,8 +263,10 @@ private struct AlertsTabView: View {
                             await appState.refresh()
                         }
                     } label: {
-                        Label("Refresh", systemImage: "arrow.clockwise")
+                        Image(systemName: "arrow.clockwise")
                     }
+                    .disabled(appState.isRefreshing)
+                    .accessibilityLabel("Refresh")
                 }
             }
             .refreshable {

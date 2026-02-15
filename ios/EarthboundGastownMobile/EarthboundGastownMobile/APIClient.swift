@@ -33,7 +33,16 @@ struct APIClient {
     }
 
     func fetchProjection() async throws -> TownProjection {
-        let data = try await send(path: "/api/town/projection/v1")
+        let tenant = normalized(settings.tenantId)
+        let path: String
+        if let tenant {
+            let encodedTenant = tenant.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? tenant
+            path = "/api/town/projection/v1?tenant_id=\(encodedTenant)"
+        } else {
+            path = "/api/town/projection/v1"
+        }
+
+        let data = try await send(path: path)
         return try decoder.decode(TownProjection.self, from: data)
     }
 
