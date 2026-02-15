@@ -74,16 +74,24 @@ final class AppState: ObservableObject {
 
         switch projectionResult {
         case .success(let value):
-            projection = value
-            successes += 1
+            if let value {
+                projection = value
+                successes += 1
+            } else {
+                projection = nil
+            }
         case .failure(let message):
             failures.append(message)
         }
 
         switch alertsResult {
         case .success(let value):
-            alerts = value.alerts
-            successes += 1
+            if let value {
+                alerts = value.alerts
+                successes += 1
+            } else {
+                alerts = []
+            }
         case .failure(let message):
             failures.append(message)
         }
