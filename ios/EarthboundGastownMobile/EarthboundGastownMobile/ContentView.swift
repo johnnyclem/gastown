@@ -149,6 +149,12 @@ private struct DashboardTabView: View {
                             }
                         }
                     }
+                } else if appState.snapshot?.version == "legacy" {
+                    Section("Projection") {
+                        Text("Projection API is unavailable on this server build.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
             .navigationTitle("EarthboundGastown")

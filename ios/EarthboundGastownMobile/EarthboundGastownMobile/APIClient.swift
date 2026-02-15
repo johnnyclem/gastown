@@ -3,6 +3,7 @@ import Foundation
 enum APIClientError: LocalizedError {
     case invalidBaseURL(String)
     case requestFailed(status: Int, body: String)
+    case dashboardAPINotFound(baseURL: String)
 
     var errorDescription: String? {
         switch self {
@@ -13,6 +14,8 @@ enum APIClientError: LocalizedError {
                 return "Request failed with status \(status)."
             }
             return "Request failed with status \(status): \(body)"
+        case .dashboardAPINotFound(let baseURL):
+            return "No dashboard API endpoints found at \(baseURL). Start `gt dashboard` and use that exact URL."
         }
     }
 }
@@ -28,11 +31,21 @@ struct APIClient {
     }
 
     func fetchSnapshot() async throws -> DashboardSnapshot {
-        let data = try await send(path: "/api/dashboard/snapshot/v1")
-        return try decoder.decode(DashboardSnapshot.self, from: data)
+        do {
+            let data = try await send(path: "/api/dashboard/snapshot/v1")
+            return try decoder.decode(DashboardSnapshot.self, from: data)
+        } catch APIClientError.requestFailed(let status, _) where status == 404 {
+            do {
+                let data = try await send(path: "/api/town/snapshot")
+                let legacy = try decoder.decode(LegacyTownSnapshot.self, from: data)
+                return mapLegacySnapshot(legacy)
+            } catch APIClientError.requestFailed(let status, _) where status == 404 {
+                throw APIClientError.dashboardAPINotFound(baseURL: settings.baseURL)
+            }
+        }
     }
 
-    func fetchProjection() async throws -> TownProjection {
+    func fetchProjection() async throws -> TownProjection? {
         let tenant = normalized(settings.tenantId)
         let path: String
         if let tenant {
@@ -42,13 +55,21 @@ struct APIClient {
             path = "/api/town/projection/v1"
         }
 
-        let data = try await send(path: path)
-        return try decoder.decode(TownProjection.self, from: data)
+        do {
+            let data = try await send(path: path)
+            return try decoder.decode(TownProjection.self, from: data)
+        } catch APIClientError.requestFailed(let status, _) where status == 404 {
+            return nil
+        }
     }
 
-    func fetchAlerts() async throws -> DashboardAlertsResponse {
-        let data = try await send(path: "/api/dashboard/alerts/v1")
-        return try decoder.decode(DashboardAlertsResponse.self, from: data)
+    func fetchAlerts() async throws -> DashboardAlertsResponse? {
+        do {
+            let data = try await send(path: "/api/dashboard/alerts/v1")
+            return try decoder.decode(DashboardAlertsResponse.self, from: data)
+        } catch APIClientError.requestFailed(let status, _) where status == 404 {
+            return nil
+        }
     }
 
     func acknowledgeAlert(alertId: String) async throws -> DashboardAlertAcknowledgeResponse {
@@ -145,4 +166,40 @@ struct APIClient {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
     }
+
+    private func mapLegacySnapshot(_ snapshot: LegacyTownSnapshot) -> DashboardSnapshot {
+        let agents = snapshot.agents.map { legacy in
+            TownAgent(
+                name: legacy.name,
+                role: legacy.role,
+                status: legacy.status
+            )
+        }
+        let activePolecats = agents.filter { $0.status.uppercased() != "IDLE" }.count
+
+        return DashboardSnapshot(
+            version: "legacy",
+            generatedAt: nil,
+            summary: SnapshotSummary(
+                totalProjects: 0,
+                blockedProjects: 0,
+                pendingApprovals: 0,
+                mergeQueueHealth: 1.0,
+                activePolecats: activePolecats
+            ),
+            townState: TownState(agents: agents),
+            projects: [],
+            mergeLanes: []
+        )
+    }
+}
+
+private struct LegacyTownSnapshot: Decodable {
+    let agents: [LegacyTownAgent]
+}
+
+private struct LegacyTownAgent: Decodable {
+    let name: String
+    let role: String
+    let status: String
 }

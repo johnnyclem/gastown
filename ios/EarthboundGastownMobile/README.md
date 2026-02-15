@@ -33,3 +33,4 @@ open ios/EarthboundGastownMobile/EarthboundGastownMobile.xcodeproj
 - Default base URL is `http://localhost:8080`.
 - For physical devices, use your host machine LAN IP instead of `localhost`.
 - App Transport Security is relaxed for local HTTP development in this build.
+- If you see `404` for all API calls, the URL is serving something other than `gt dashboard` (for example a frontend dev server on port 8080).
