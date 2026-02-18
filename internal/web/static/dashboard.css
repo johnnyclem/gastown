@@ -1,6 +1,6 @@
 /* ============================================
    GAS TOWN CONTROL CENTER — Flat Design System
-   Font: Outfit (geometric sans-serif)
+   Font: Inter (professional sans-serif)
    Theme: Light, corporate, zero shadows
    ============================================ */
 
@@ -33,10 +33,10 @@
 }
 
 body {
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
     background: var(--bg-muted);
     color: var(--fg);
-    padding: 24px;
+    padding: 0;
     min-height: 100vh;
     font-size: 14px;
     line-height: 1.5;
@@ -45,8 +45,88 @@ body {
 
 .dashboard {
     width: 100%;
-    max-width: 1400px;
-    margin: 0 auto;
+    margin: 0;
+}
+
+/* ============================================
+   SIDEBAR + MAIN LAYOUT
+   ============================================ */
+
+.dashboard-body {
+    display: flex;
+    min-height: calc(100vh - 72px);
+}
+
+.sidebar {
+    width: 68px;
+    background: var(--bg);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 12px 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    flex-shrink: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 50;
+}
+
+.sidebar-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 0;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 0.55rem;
+    font-weight: 500;
+    gap: 3px;
+    border-left: 3px solid transparent;
+    text-decoration: none;
+    transition: all 150ms ease;
+    user-select: none;
+}
+
+.sidebar-item:hover {
+    color: var(--text-secondary);
+    background: var(--bg-muted);
+}
+
+.sidebar-item.active {
+    color: var(--primary);
+    border-left-color: var(--primary);
+    background: rgba(59, 130, 246, 0.06);
+    font-weight: 600;
+}
+
+.sidebar-item .lucide {
+    width: 20px;
+    height: 20px;
+}
+
+.sidebar-label {
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 58px;
+    text-align: center;
+}
+
+.sidebar-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 6px 10px;
+}
+
+.main-content {
+    flex: 1;
+    min-width: 0;
+    padding: 20px 24px;
+    overflow-y: auto;
 }
 
 /* ============================================
@@ -57,9 +137,13 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 24px;
-    padding-bottom: 0;
-    border-bottom: none;
+    padding: 12px 24px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 60;
 }
 
 .header-brand {
@@ -153,14 +237,11 @@ h1 {
 }
 
 /* ============================================
-   GRID LAYOUT
+   PANEL CONTAINER (sidebar-driven, one visible at a time)
    ============================================ */
 
 .panels {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
-    gap: 20px;
-    margin-bottom: 20px;
+    display: block;
     width: 100%;
 }
 
@@ -173,15 +254,15 @@ h1 {
     border: none;
     border-radius: 8px;
     overflow: hidden;
-    transition: transform 200ms ease;
+    display: none;
 }
 
-.panel:hover {
-    transform: scale(1.005);
+.panel.active {
+    display: block;
 }
 
 .panel-full {
-    grid-column: 1 / -1;
+    /* no-op in sidebar layout */
 }
 
 .panel-header {
@@ -216,7 +297,6 @@ h1 {
 }
 
 .panel-body {
-    max-height: 300px;
     overflow-y: auto;
 }
 
@@ -383,7 +463,7 @@ tr:hover {
     font-weight: 600;
     padding: 6px 14px;
     transition: all 200ms ease;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .convoy-add-issue-btn:hover {
@@ -406,7 +486,7 @@ tr:hover {
     padding: 8px 12px;
     border-radius: 6px;
     font-size: 0.85rem;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .convoy-add-issue-input:focus {
@@ -441,7 +521,7 @@ tr:hover {
     padding: 6px 14px;
     margin-right: 8px;
     transition: all 200ms ease;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .new-convoy-btn:hover {
@@ -626,7 +706,7 @@ tr.crew-spinning { background: #F0FDF4; }
     font-weight: 600;
     padding: 6px 12px;
     transition: all 200ms ease;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .attach-btn:hover {
@@ -712,7 +792,7 @@ tr.crew-spinning { background: #F0FDF4; }
     padding: 6px 14px;
     margin-right: 8px;
     transition: all 200ms ease;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .new-issue-btn:hover {
@@ -729,7 +809,7 @@ tr.crew-spinning { background: #F0FDF4; }
     font-weight: 600;
     padding: 12px 24px;
     transition: all 200ms ease;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .btn-primary {
@@ -768,7 +848,7 @@ tr.crew-spinning { background: #F0FDF4; }
     font-size: 0.85rem;
     font-weight: 500;
     transition: all 200ms ease;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .btn-back:hover {
@@ -885,7 +965,7 @@ tr.crew-spinning { background: #F0FDF4; }
     font-size: 0.9rem;
     padding: 12px 14px;
     box-sizing: border-box;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .form-group input:focus,
@@ -932,7 +1012,7 @@ tr.crew-spinning { background: #F0FDF4; }
     font-weight: 500;
     padding: 8px 14px;
     transition: all 200ms ease;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .tab-btn:hover {
@@ -1130,7 +1210,7 @@ tr.priority-2 { background: #FFEDD5; }
     cursor: pointer;
     font-size: 0.8rem;
     font-weight: 600;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
     padding: 8px 16px;
     transition: all 200ms ease;
     background: var(--bg);
@@ -1180,7 +1260,7 @@ tr.priority-2 { background: #FFEDD5; }
     padding: 6px 28px 6px 10px;
     border-radius: 6px;
     font-size: 0.8rem;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
     cursor: pointer;
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239CA3AF' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
@@ -1502,7 +1582,7 @@ tr.hook-stale .hook-id {
     font-weight: 600;
     padding: 4px 10px;
     transition: all 200ms ease;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .hook-detach-btn:hover {
@@ -1526,7 +1606,7 @@ tr.hook-stale .hook-id {
     padding: 6px 14px;
     margin-right: 4px;
     transition: all 200ms ease;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .hook-attach-btn:hover {
@@ -1545,7 +1625,7 @@ tr.hook-stale .hook-id {
     padding: 4px 10px;
     margin-right: 4px;
     transition: all 200ms ease;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .hook-clear-all-btn:hover {
@@ -1572,7 +1652,7 @@ tr.hook-stale .hook-id {
     border: 2px solid var(--border);
     border-radius: 6px;
     color: var(--fg);
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
     font-size: 0.85rem;
     padding: 8px 12px;
 }
@@ -1592,7 +1672,7 @@ tr.hook-stale .hook-id {
     font-weight: 600;
     padding: 8px 16px;
     transition: all 200ms ease;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .hook-attach-submit:hover {
@@ -1614,7 +1694,7 @@ tr.hook-stale .hook-id {
     font-weight: 500;
     padding: 7px 14px;
     transition: all 200ms ease;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .hook-attach-cancel:hover {
@@ -1695,7 +1775,7 @@ tr.hook-stale .hook-id {
     font-weight: 500;
     cursor: pointer;
     transition: all 200ms ease;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .mail-tab:hover {
@@ -1760,7 +1840,7 @@ tr.hook-stale .hook-id {
     cursor: pointer;
     margin-right: 8px;
     transition: all 200ms ease;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .compose-btn:hover {
@@ -1792,7 +1872,7 @@ tr.hook-stale .hook-id {
     font-size: 0.85rem;
     font-weight: 500;
     transition: all 200ms ease;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .mail-back-btn:hover {
@@ -1841,7 +1921,7 @@ tr.hook-stale .hook-id {
     font-size: 0.85rem;
     font-weight: 600;
     transition: all 200ms ease;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .mail-reply-btn:hover {
@@ -1892,7 +1972,7 @@ tr.hook-stale .hook-id {
     padding: 10px 14px;
     border-radius: 6px;
     font-size: 0.9rem;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .mail-compose-input:focus,
@@ -1923,7 +2003,7 @@ tr.hook-stale .hook-id {
     font-size: 0.85rem;
     font-weight: 600;
     transition: all 200ms ease;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .mail-send-btn:hover {
@@ -1947,7 +2027,7 @@ tr.hook-stale .hook-id {
     font-size: 0.85rem;
     font-weight: 500;
     transition: all 200ms ease;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .mail-cancel-btn:hover {
@@ -2065,7 +2145,7 @@ tr.hook-stale .hook-id {
     font-weight: 500;
     cursor: pointer;
     transition: all 200ms ease;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .tl-filter-btn:hover {
@@ -2088,7 +2168,7 @@ tr.hook-stale .hook-id {
     font-size: 0.75rem;
     cursor: pointer;
     max-width: 130px;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .tl-timeline {
@@ -2238,12 +2318,27 @@ tr.hook-stale .hook-id {
     color: var(--text-muted);
 }
 
-.panel.expanded .tl-summary {
+.panel.active .tl-summary {
     white-space: normal;
 }
 
-.panel.expanded .tl-timeline {
+.panel.active .tl-timeline {
     max-height: none;
+}
+
+/* In sidebar layout, active panels get full content width */
+.panel.active .pr-title,
+.panel.active .convoy-id,
+.panel.active .polecat-issue,
+.panel.active .issue-title,
+.panel.active .hook-title,
+.panel.active .mail-subject,
+.panel.active .feed-summary,
+.panel.active td {
+    max-width: none;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
 }
 
 /* ============================================
@@ -2303,8 +2398,8 @@ tr.hook-stale .hook-id {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 24px;
-    margin-bottom: 20px;
+    padding: 14px 20px;
+    margin-bottom: 16px;
     background: var(--bg);
     border-radius: 8px;
 }
@@ -2369,8 +2464,8 @@ tr.hook-stale .hook-id {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 24px;
-    margin-bottom: 20px;
+    padding: 14px 20px;
+    margin-bottom: 16px;
     background: var(--bg);
     border-radius: 8px;
     gap: 20px;
@@ -2422,97 +2517,54 @@ tr.hook-stale .hook-id {
 .alert-green { background: #D1FAE5; color: #065F46; }
 
 /* ============================================
-   COLLAPSE / EXPAND
+   COLLAPSE / EXPAND (hidden in sidebar layout)
    ============================================ */
 
-.collapse-btn {
-    background: var(--bg-muted);
-    border: none;
-    border-radius: 6px;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-size: 0.75rem;
-    padding: 4px 10px;
-    margin-right: 6px;
-    transition: all 200ms ease;
-    font-weight: 500;
-}
-
-.collapse-btn:hover {
-    color: var(--fg);
-    background: var(--border);
-}
-
-.panel.collapsed .panel-body,
-.panel.collapsed .panel-tabs,
-.panel.collapsed .tl-filters {
+.collapse-btn,
+.expand-btn {
     display: none;
 }
 
-.panel.collapsed .collapse-btn {
-    transform: rotate(-90deg);
+/* ============================================
+   LUCIDE ICON BASE STYLES
+   ============================================ */
+
+.lucide {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    stroke-width: 1.75;
+    fill: none;
+    vertical-align: middle;
+    display: inline-block;
+    flex-shrink: 0;
 }
 
-.expand-btn {
-    margin-left: auto;
-    font-size: 0.75rem;
-    font-weight: 500;
+.panel-header .lucide {
+    width: 18px;
+    height: 18px;
     color: var(--text-muted);
-    cursor: pointer;
-    padding: 4px 10px;
-    border: none;
-    border-radius: 6px;
-    background: var(--bg-muted);
-    transition: all 200ms ease;
-    font-family: 'Outfit', sans-serif;
 }
 
-.expand-btn:hover {
-    color: var(--fg);
-    background: var(--border);
+.stat-label .lucide {
+    width: 14px;
+    height: 14px;
 }
 
-.panel.expanded {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 100;
-    margin: 0;
-    border-radius: 0;
-    overflow: auto;
-    background: var(--bg);
+.alert-item .lucide {
+    width: 14px;
+    height: 14px;
 }
 
-.panel.expanded .panel-body {
-    max-height: calc(100vh - 60px);
-    overflow: auto;
+.mayor-icon .lucide {
+    width: 24px;
+    height: 24px;
+    color: var(--text-secondary);
 }
 
-.panel.expanded table {
-    font-size: 0.95rem;
-}
-
-.panel.expanded .expand-btn {
-    color: var(--red);
-    background: #FEE2E2;
-    font-weight: 600;
-}
-
-.panel.expanded .pr-title,
-.panel.expanded .convoy-id,
-.panel.expanded .polecat-issue,
-.panel.expanded .issue-title,
-.panel.expanded .hook-title,
-.panel.expanded .mail-subject,
-.panel.expanded .feed-summary,
-.panel.expanded .tl-summary,
-.panel.expanded td {
-    max-width: none;
-    white-space: normal;
-    overflow: visible;
-    text-overflow: unset;
+.agent-icon .lucide {
+    width: 16px;
+    height: 16px;
 }
 
 /* ============================================
@@ -2526,7 +2578,7 @@ tr.hook-stale .hook-id {
     padding: 10px 18px;
     border-radius: 8px;
     cursor: pointer;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
     font-size: 0.85rem;
     font-weight: 600;
     display: flex;
@@ -2583,7 +2635,7 @@ tr.hook-stale .hook-id {
     border: none;
     border-bottom: 2px solid var(--bg-muted);
     color: var(--fg);
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
     font-size: 1rem;
     outline: none;
     font-weight: 500;
@@ -2717,7 +2769,7 @@ tr.hook-stale .hook-id {
     border: none;
     border-radius: 6px;
     color: var(--fg);
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
     font-size: 0.9rem;
     margin-bottom: 12px;
 }
@@ -2741,7 +2793,7 @@ tr.hook-stale .hook-id {
     font-weight: 600;
     cursor: pointer;
     border: none;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
     transition: all 200ms ease;
 }
 
@@ -2813,7 +2865,7 @@ tr.hook-stale .hook-id {
     font-size: 0.85rem;
     font-weight: 500;
     cursor: pointer;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
     transition: all 200ms ease;
 }
 
@@ -2854,7 +2906,7 @@ tr.hook-stale .hook-id {
     padding: 12px 14px;
     border-radius: 6px;
     font-size: 0.9rem;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .command-field-input:focus,
@@ -2873,7 +2925,7 @@ tr.hook-stale .hook-id {
     padding: 12px 14px;
     border-radius: 6px;
     font-size: 0.9rem;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
     resize: vertical;
     min-height: 60px;
 }
@@ -2953,7 +3005,7 @@ tr.hook-stale .hook-id {
     font-size: 0.8rem;
     font-weight: 500;
     transition: all 200ms ease;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .output-panel-btn:hover {
@@ -2993,7 +3045,7 @@ tr.hook-stale .hook-id {
     padding: 4px 10px;
     transition: all 200ms ease;
     white-space: nowrap;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .esc-btn:hover {
@@ -3038,7 +3090,7 @@ tr.hook-stale .hook-id {
     font-size: 0.75rem;
     padding: 4px 8px;
     max-width: 160px;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .esc-reassign-confirm {
@@ -3063,7 +3115,7 @@ tr.hook-stale .hook-id {
     border-radius: 6px;
     color: var(--purple);
     cursor: pointer;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
     font-size: 0.75rem;
     font-weight: 600;
     padding: 4px 10px;
@@ -3107,7 +3159,7 @@ tr.hook-stale .hook-id {
     border: none;
     color: var(--fg);
     cursor: pointer;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
     font-size: 0.85rem;
     padding: 10px 14px;
     text-align: left;
@@ -3146,17 +3198,22 @@ tr.hook-stale .hook-id {
     .badge { padding: 4px 10px; font-size: 0.75rem; }
     .tab-btn { padding: 10px 14px; font-size: 0.85rem; }
     .mail-tab { padding: 6px 12px; font-size: 0.8rem; }
-    .collapse-btn { padding: 6px 12px; font-size: 0.8rem; }
     .new-issue-btn { padding: 8px 14px; font-size: 0.8rem; }
     .cmd-btn { padding: 10px 14px; }
     tr { min-height: 44px; }
     .panel-header { padding: 14px 16px; }
+    .main-content { padding: 16px; }
 }
 
 /* TABLET PORTRAIT */
 @media (max-width: 768px) {
-    .panels {
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    .sidebar {
+        width: 56px;
+    }
+
+    .sidebar-label {
+        font-size: 0.5rem;
+        max-width: 48px;
     }
 
     .summary-banner {
@@ -3180,33 +3237,66 @@ tr.hook-stale .hook-id {
     .mayor-status { justify-content: center; }
     .health-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
 
-    .pr-title,
-    .issue-title,
-    .hook-title,
-    .mail-subject,
-    .ready-title {
-        max-width: 150px;
-    }
-
     .command-palette { width: 95%; }
 }
 
-/* PHONES */
+/* PHONES — sidebar becomes bottom tab bar */
 @media (max-width: 600px) {
     body {
-        padding: 12px;
         font-size: 13px;
     }
 
-    .panels {
-        grid-template-columns: 1fr;
-        gap: 12px;
+    .dashboard-body {
+        flex-direction: column-reverse;
+        min-height: auto;
+    }
+
+    .sidebar {
+        width: 100%;
+        height: auto;
+        flex-direction: row;
+        border-right: none;
+        border-top: 1px solid var(--border);
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 50;
+        padding: 4px 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+
+    .sidebar-item {
+        padding: 6px 8px;
+        border-left: none;
+        border-top: 2px solid transparent;
+        min-width: 48px;
+        flex-shrink: 0;
+    }
+
+    .sidebar-item.active {
+        border-left-color: transparent;
+        border-top-color: var(--primary);
+    }
+
+    .sidebar-item .lucide {
+        width: 18px;
+        height: 18px;
+    }
+
+    .sidebar-label {
+        font-size: 0.5rem;
+    }
+
+    .main-content {
+        padding: 12px;
+        padding-bottom: 72px; /* space for bottom nav */
     }
 
     header {
-        flex-direction: column;
-        gap: 12px;
-        text-align: center;
+        padding: 10px 16px;
+        height: auto;
     }
 
     .header-brand { justify-content: center; }
@@ -3247,24 +3337,11 @@ tr.hook-stale .hook-id {
     .badge { padding: 5px 10px; font-size: 0.75rem; }
     .tab-btn { padding: 12px 14px; font-size: 0.85rem; }
     .mail-tab { padding: 8px 12px; }
-    .collapse-btn { padding: 8px 12px; font-size: 0.8rem; }
     .new-issue-btn, .compose-btn { padding: 10px 16px; font-size: 0.85rem; }
     .attach-btn { padding: 8px 12px; font-size: 0.8rem; }
     .cmd-btn { padding: 10px 14px; font-size: 0.8rem; }
 
-    .panel-body { max-height: 240px; }
     .health-grid { grid-template-columns: 1fr; }
-
-    .pr-title,
-    .issue-title,
-    .hook-title,
-    .mail-subject,
-    .ready-title,
-    .convoy-title {
-        max-width: 120px;
-    }
-
-    .polecat-issue { max-width: 100px; }
 
     .modal-content {
         width: 100%;
@@ -3293,7 +3370,7 @@ tr.hook-stale .hook-id {
         left: 8px;
         right: 8px;
         top: auto;
-        bottom: 8px;
+        bottom: 72px;
     }
     .toast { min-width: auto; width: 100%; }
 
@@ -3320,18 +3397,8 @@ tr.hook-stale .hook-id {
 
 /* EXTRA SMALL */
 @media (max-width: 400px) {
-    body { padding: 8px; }
-    .panels { gap: 8px; }
     .summary-stats { gap: 8px; }
     .stat-value { font-size: 1rem; }
     th, td { padding: 10px 8px; font-size: 0.75rem; }
     .panel-header h2 { font-size: 0.8rem; }
-
-    .pr-title,
-    .issue-title,
-    .hook-title,
-    .mail-subject,
-    .ready-title {
-        max-width: 90px;
-    }
 }

@@ -65,53 +65,65 @@
     connectSSE();
 
     // ============================================
-    // EXPAND BUTTON HANDLER
+    // SIDEBAR NAVIGATION
     // ============================================
+    var ACTIVE_PANEL_KEY = 'gastown-active-panel';
+
+    function switchPanel(panelId) {
+        // Deactivate all panels
+        document.querySelectorAll('.panel').forEach(function(p) {
+            p.classList.remove('active');
+        });
+        // Deactivate all sidebar items
+        document.querySelectorAll('.sidebar-item').forEach(function(s) {
+            s.classList.remove('active');
+        });
+        // Activate target panel
+        var panel = document.getElementById(panelId);
+        var navItem = document.querySelector('.sidebar-item[data-panel="' + panelId + '"]');
+        if (panel) panel.classList.add('active');
+        if (navItem) navItem.classList.add('active');
+        // Persist selection
+        try { localStorage.setItem(ACTIVE_PANEL_KEY, panelId); } catch(e) {}
+    }
+
+    // Sidebar click handler
     document.addEventListener('click', function(e) {
-        var btn = e.target.closest('.expand-btn');
-        if (!btn) return;
-
+        var item = e.target.closest('.sidebar-item');
+        if (!item) return;
         e.preventDefault();
-        var panel = btn.closest('.panel');
-        if (!panel) return;
-
-        if (panel.classList.contains('expanded')) {
-            panel.classList.remove('expanded');
-            btn.textContent = 'Expand';
-            // Resume refresh when panel is collapsed
-            window.pauseRefresh = false;
-        } else {
-            document.querySelectorAll('.panel.expanded').forEach(function(p) {
-                p.classList.remove('expanded');
-                var b = p.querySelector('.expand-btn');
-                if (b) b.textContent = 'Expand';
-            });
-            panel.classList.add('expanded');
-            btn.textContent = '✕ Close';
-            // Pause refresh while panel is expanded
-            window.pauseRefresh = true;
-        }
+        var panelId = item.getAttribute('data-panel');
+        if (panelId) switchPanel(panelId);
     });
 
-    // ============================================
-    // COLLAPSE BUTTON HANDLER
-    // ============================================
-    document.addEventListener('click', function(e) {
-        var btn = e.target.closest('.collapse-btn');
-        if (!btn) return;
+    // Expose for external use
+    window.switchPanel = switchPanel;
 
-        e.preventDefault();
-        var panel = btn.closest('.panel');
-        if (!panel) return;
+    // Restore active panel on load
+    var savedPanel = null;
+    try { savedPanel = localStorage.getItem(ACTIVE_PANEL_KEY); } catch(e) {}
+    if (savedPanel && document.getElementById(savedPanel)) {
+        switchPanel(savedPanel);
+    } else {
+        // Default to first panel
+        switchPanel('convoy-panel');
+    }
 
-        panel.classList.toggle('collapsed');
-    });
-
-    // After HTMX swap - morph preserves most state, but we need to re-init some things
+    // After HTMX swap - restore active panel and re-render icons
     document.body.addEventListener('htmx:afterSwap', function() {
-        // Morph preserves expanded class, so we don't need to close panels anymore
-        // Just check if we should resume refresh
-        var hasExpanded = document.querySelector('.panel.expanded');
+        // Restore active sidebar panel after morph
+        var activePanel = null;
+        try { activePanel = localStorage.getItem(ACTIVE_PANEL_KEY); } catch(e) {}
+        if (activePanel && document.getElementById(activePanel)) {
+            switchPanel(activePanel);
+        } else {
+            switchPanel('convoy-panel');
+        }
+        // Re-render Lucide icons after DOM morph
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+        // Check if we should resume refresh
         var mailDetail = document.getElementById('mail-detail');
         var mailCompose = document.getElementById('mail-compose');
         var issueDetail = document.getElementById('issue-detail');
@@ -124,10 +136,10 @@
                           (prDetail && prDetail.style.display !== 'none') ||
                           (convoyDetailView && convoyDetailView.style.display !== 'none') ||
                           (convoyCreateView && convoyCreateView.style.display !== 'none');
-        if (!inDetailView && !hasExpanded) {
+        if (!inDetailView) {
             window.pauseRefresh = false;
         }
-        // Reload dynamic panels after swap (handled via window functions)
+        // Reload dynamic panels after swap
         if (window.refreshCrewPanel) window.refreshCrewPanel();
         if (window.refreshReadyPanel) window.refreshReadyPanel();
         // Update connection status indicator after morph
@@ -178,11 +190,11 @@
         }
     }
 
-    // Detect active context based on expanded panel or visible detail view
+    // Detect active context based on active panel or visible detail view
     function detectActiveContext() {
-        var expandedPanel = document.querySelector('.panel.expanded');
-        if (expandedPanel) {
-            var panelId = expandedPanel.id || '';
+        var activePanel = document.querySelector('.panel.active');
+        if (activePanel) {
+            var panelId = activePanel.id || '';
             if (panelId.indexOf('mail') !== -1) return 'Mail';
             if (panelId.indexOf('crew') !== -1) return 'Crew';
             if (panelId.indexOf('issue') !== -1 || panelId.indexOf('work') !== -1) return 'Work';
@@ -761,17 +773,9 @@
             return;
         }
 
-        // Escape closes expanded panels when palette is not open
+        // Escape is available for future use (no more expanded panels to close)
         if (!isPaletteOpen && e.key === 'Escape') {
-            var expanded = document.querySelector('.panel.expanded');
-            if (expanded) {
-                e.preventDefault();
-                expanded.classList.remove('expanded');
-                var expandBtn = expanded.querySelector('.expand-btn');
-                if (expandBtn) expandBtn.textContent = 'Expand';
-                window.pauseRefresh = false;
-                return;
-            }
+            // No-op in sidebar layout
         }
 
         // Rest only when palette is open
@@ -981,10 +985,10 @@
                         var stateClass = 'crew-state-' + member.state;
                         var stateText = member.state.charAt(0).toUpperCase() + member.state.slice(1);
                         var stateIcon = '';
-                        if (member.state === 'spinning') stateIcon = '🔄 ';
-                        else if (member.state === 'finished') stateIcon = '✅ ';
-                        else if (member.state === 'questions') stateIcon = '❓ ';
-                        else if (member.state === 'ready') stateIcon = '⏸️ ';
+                        if (member.state === 'spinning') stateIcon = '<i data-lucide="refresh-cw"></i> ';
+                        else if (member.state === 'finished') stateIcon = '<i data-lucide="check-circle"></i> ';
+                        else if (member.state === 'questions') stateIcon = '<i data-lucide="help-circle"></i> ';
+                        else if (member.state === 'ready') stateIcon = '<i data-lucide="pause-circle"></i> ';
 
                         var sessionBadge = '';
                         if (member.session === 'attached') {
@@ -1012,11 +1016,13 @@
                             '<td><span class="crew-hook">' + (member.hook ? escapeHtml(member.hook) : '—') + '</span></td>' +
                             '<td class="crew-activity">' + (member.last_active || '—') + '</td>' +
                             '<td>' + sessionBadge + '</td>' +
-                            '<td><button class="attach-btn" data-cmd="' + escapeHtml(attachCmd) + '" title="Copy attach command">📎 Attach</button></td>';
+                            '<td><button class="attach-btn" data-cmd="' + escapeHtml(attachCmd) + '" title="Copy attach command"><i data-lucide="paperclip"></i> Attach</button></td>';
                         tbody.appendChild(tr);
                     });
 
                     if (count) count.textContent = data.total;
+                    // Re-render Lucide icons in dynamically created crew rows
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
                 } else {
                     table.style.display = 'none';
                     empty.style.display = 'block';
@@ -2667,13 +2673,13 @@
             } else {
                 showToast('error', 'Failed', data.error || 'Unknown error');
                 btn.disabled = false;
-                btn.textContent = action === 'ack' ? '👍 Ack' : '✓ Resolve';
+                btn.textContent = action === 'ack' ? 'Ack' : '✓ Resolve';
             }
         })
         .catch(function(err) {
             showToast('error', 'Error', err.message || 'Request failed');
             btn.disabled = false;
-            btn.textContent = action === 'ack' ? '👍 Ack' : '✓ Resolve';
+            btn.textContent = action === 'ack' ? 'Ack' : '✓ Resolve';
         });
     }
 
@@ -2881,5 +2887,11 @@
         initTimelineFilters();
     });
 
+    // ============================================
+    // LUCIDE ICONS — Initial render
+    // ============================================
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
 
 })();
